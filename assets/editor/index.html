@@ -465,18 +465,28 @@ async function swapText(btn, html) {
 }
 
 async function save() {
-  const btn = $("saveBtn");
-  btn.disabled = true;
-  const r = await api("/api/save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ target, style }) });
-  const j = await r.json();
-  btn.disabled = false;
-  if (!r.ok) return toast(j.error || "Could not save", true);
-  S = { ...S, ...j.state };
-  saved = JSON.stringify(style);
-  sync();
-  await swapText(btn, "Saved");
-  setTimeout(() => swapText(btn, "Save"), 1400);
-  return true;
+  // One save at a time; a second click waits for the first.
+  if (save.pending) return save.pending;
+  save.pending = (async () => {
+    const btn = $("saveBtn");
+    btn.disabled = true;
+    // What is sent is what gets marked saved: edits made while saving stay unsaved.
+    const sent = JSON.stringify(style);
+    try {
+      const r = await api("/api/save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ target, style: JSON.parse(sent) }) });
+      const j = await r.json();
+      if (!r.ok) { toast(j.error || "Could not save", true); return false; }
+      S = { ...S, ...j.state };
+      saved = sent;
+      sync();
+      await swapText(btn, "Saved");
+      setTimeout(() => swapText(btn, "Save"), 1400);
+      return true;
+    } finally {
+      btn.disabled = false;
+    }
+  })();
+  try { return await save.pending; } finally { save.pending = null; }
 }
 $("saveBtn").onclick = save;
 addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); save(); } });
@@ -484,6 +494,7 @@ addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "
 $("renderBtn").onclick = async () => {
   const btn = $("renderBtn");
   if (JSON.stringify(style) !== saved && !(await save())) return;
+  if (JSON.stringify(style) !== saved) return toast("Save your latest changes first", true);
   btn.disabled = true;
   await swapText(btn, '<span class="spin"></span>Rendering…');
   const r = await api("/api/render", { method: "POST" });

@@ -116,8 +116,10 @@ export function state(scenarioFile: string) {
     scenarioFile,
     configFile: configFile ?? path.join(path.dirname(scenarioFile), CONFIG_FILE),
     configExists: Boolean(configFile),
-    scenarioStyle: pick(raw.style ?? {}),
-    projectStyle: pick(project),
+    // Image backgrounds as absolute paths: each file's are relative to its own folder, and the
+    // page may save one to the other file.
+    scenarioStyle: absoluteImage(pick(raw.style ?? {}), path.dirname(scenarioFile)),
+    projectStyle: absoluteImage(pick(project), configFile ? path.dirname(configFile) : path.dirname(scenarioFile)),
     /** Style settings that the editor does not change but that show in the preview. */
     frame: loaded.scenario.style?.frame ?? "none",
     url: loaded.scenario.url ?? null,
@@ -137,7 +139,8 @@ function pick(style: StyleT): Partial<StyleT> {
 }
 
 /**
- * Write the edited settings. To the scenario: into its `style`. To the project: into
+ * Write the edited settings (an image path in them is absolute, or relative to the scenario's
+ * folder). To the scenario: into its `style`. To the project: into
  * screenplay.config.json, and out of this scenario's `style`, which would otherwise win
  * over the project's and hide the change in this video.
  */
@@ -148,13 +151,13 @@ export function saveStyle(scenarioFile: string, target: "scenario" | "project", 
   const raw = JSON.parse(fs.readFileSync(scenarioFile, "utf8")) as Record<string, unknown> & { style?: Record<string, unknown> };
   const scenarioDir = path.dirname(scenarioFile);
   if (target === "scenario") {
-    raw.style = { ...(raw.style ?? {}), ...relativeImage(values, scenarioDir) };
+    raw.style = { ...(raw.style ?? {}), ...relativeImage(values, scenarioDir, scenarioDir) };
     writeJson(scenarioFile, raw);
     return scenarioFile;
   }
   const configFile = findProjectConfig(scenarioDir) ?? path.join(scenarioDir, CONFIG_FILE);
   const config = fs.existsSync(configFile) ? (JSON.parse(fs.readFileSync(configFile, "utf8")) as Record<string, unknown>) : {};
-  config.style = { ...((config.style as Record<string, unknown>) ?? {}), ...relativeImage(values, path.dirname(configFile)) };
+  config.style = { ...((config.style as Record<string, unknown>) ?? {}), ...relativeImage(values, scenarioDir, path.dirname(configFile)) };
   writeJson(configFile, config);
   if (raw.style) {
     for (const k of EDITED) delete raw.style[k];
@@ -164,12 +167,18 @@ export function saveStyle(scenarioFile: string, target: "scenario" | "project", 
   return configFile;
 }
 
-/** Image paths are stored relative to the file that holds them, so the project can move. */
-function relativeImage(style: Partial<StyleT>, dir: string): Partial<StyleT> {
-  if (isImagePath(style.background, BACKGROUNDS) && path.isAbsolute(style.background)) {
-    return { ...style, background: path.relative(dir, style.background).split(path.sep).join("/") };
-  }
-  return style;
+function absoluteImage(style: Partial<StyleT>, dir: string): Partial<StyleT> {
+  return isImagePath(style.background, BACKGROUNDS) ? { ...style, background: path.resolve(dir, style.background) } : style;
+}
+
+/**
+ * Image paths are stored relative to the file that holds them, so the project can move.
+ * `from` is the folder a relative path in `style` is relative to.
+ */
+function relativeImage(style: Partial<StyleT>, from: string, to: string): Partial<StyleT> {
+  if (!isImagePath(style.background, BACKGROUNDS)) return style;
+  const abs = path.resolve(from, style.background);
+  return { ...style, background: path.relative(to, abs).split(path.sep).join("/") };
 }
 
 /** An uploaded background goes next to the scenario, in screenplay-assets/. */
@@ -204,10 +213,7 @@ function imagePathFor(scenarioFile: string, p: string, from: string): string | u
   const abs = path.resolve(from === "project" ? projectDir : scenarioDir, p);
   const inside = (dir: string) => abs === dir || abs.startsWith(dir + path.sep);
   const s = state(scenarioFile);
-  const named = [
-    typeof s.scenarioStyle.background === "string" ? path.resolve(scenarioDir, s.scenarioStyle.background) : "",
-    typeof s.projectStyle.background === "string" ? path.resolve(projectDir, s.projectStyle.background) : "",
-  ];
+  const named = [s.scenarioStyle.background, s.projectStyle.background];
   if (!inside(scenarioDir) && !inside(projectDir) && !named.includes(abs)) return undefined;
   return fs.existsSync(abs) && fs.statSync(abs).isFile() ? abs : undefined;
 }

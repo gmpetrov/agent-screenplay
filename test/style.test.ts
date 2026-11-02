@@ -109,7 +109,7 @@ describe("style editor server", () => {
       expect((await img("../secret.txt")).status).toBe(404);
       const up = await fetch(`${base}/api/upload`, { method: "POST", headers: { ...h, "x-filename": "Brand BG.png" }, body: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2]) });
       const { path: saved } = (await up.json()) as { path: string };
-      expect(saved).toMatch(/videos\/screenplay-assets\/Brand-BG-[0-9a-f]{6}\.png$/);
+      expect(saved.split(path.sep).join("/")).toMatch(/videos\/screenplay-assets\/Brand-BG-[0-9a-f]{6}\.png$/);
       expect((await fetch(`${base}/api/upload`, { method: "POST", headers: { ...h, "x-filename": "x.txt" }, body: "hello" })).status).toBe(400);
       expect((await fetch(`${base}/api/render`, { method: "POST", headers: h })).status).toBe(409);
     } finally {

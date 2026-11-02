@@ -64,7 +64,7 @@ describe("scenario", () => {
     const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "sp-")));
     fs.writeFileSync(path.join(dir, "a.json"), JSON.stringify({ url: "app/index.html", steps: [{ pause: 1 }] }));
     const link = `${dir}-link`;
-    fs.symlinkSync(dir, link);
+    fs.symlinkSync(dir, link, "junction"); // a junction needs no admin rights on Windows
     try {
       expect(loadScenario(path.join(link, "a.json")).scenario.url).toBe(loadScenario(path.join(dir, "a.json")).scenario.url);
     } finally {
