@@ -5,7 +5,7 @@ import { createCanvas, type Canvas } from "@napi-rs/canvas";
 import type { LoadedScenario } from "../scenario/load.js";
 import { stepKind } from "../scenario/schema.js";
 import type { Take } from "../take.js";
-import { cursorAt, locate, planTake, type Plan } from "../direct/plan.js";
+import { cursorAt, locate, OVERLAY_DELAY, planTake, type Plan } from "../direct/plan.js";
 import { ffmpegPath, runFfmpeg } from "../ffmpeg.js";
 import { buildStaticLayer, clamp01, computeLayout, drawCapture, drawCard, type FrameState } from "./compose.js";
 import { openSource } from "./sources.js";
@@ -214,6 +214,7 @@ function pickStoryboardTimes(plan: Plan, take: Take): Array<{ o: number; label: 
     if (!t) continue;
     let o: number;
     if (st.card) o = t.o0 + Math.min(1.2, (t.o1 - t.o0) / 2);
+    else if (st.kind === "callout" || st.kind === "highlight") o = Math.min(t.o1 - 0.05, t.o0 + OVERLAY_DELAY + 0.7);
     else if (t.oAction !== undefined) o = Math.min(t.o1 - 0.05, t.oAction + (st.kind === "type" ? 0.9 : 0.35));
     else o = (t.o0 + t.o1) / 2;
     out.push({ o: Math.max(0, Math.min(plan.duration - 1 / plan.fps, o)), label: `${st.index + 1} · ${st.label}` });

@@ -217,7 +217,12 @@ export function drawCapture(
     drawCursor(ctx, style.cursor, q, size, st.cursor.alpha);
   }
 
-  if (st.caption) drawCaption(ctx, layout, st.caption.c.text, st.caption.alpha);
+  if (st.caption) {
+    // Keep the caption away from where the action is: move it to the top when the cursor is low.
+    const focus = st.cursor ? toOut(st.cursor.p) : undefined;
+    const low = focus !== undefined && focus.y > win.y + win.h * 0.62;
+    drawCaption(ctx, layout, st.caption.c.text, st.caption.alpha, low ? "top" : "bottom");
+  }
 }
 
 function pad(b: Box, n: number): Box {
@@ -281,7 +286,7 @@ function drawBubble(
   ctx.restore();
 }
 
-function drawCaption(ctx: SKRSContext2D, layout: Layout, text: string, alpha: number) {
+function drawCaption(ctx: SKRSContext2D, layout: Layout, text: string, alpha: number, where: "top" | "bottom") {
   const { k, window: win } = layout;
   const fontSize = 30 * k;
   ctx.save();
@@ -292,7 +297,7 @@ function drawCaption(ctx: SKRSContext2D, layout: Layout, text: string, alpha: nu
   const bw = tw + 48 * k;
   const bh = lines.length * lh + 26 * k;
   const bx = win.x + (win.w - bw) / 2;
-  const by = win.y + win.h - bh - 34 * k;
+  const by = where === "bottom" ? win.y + win.h - bh - 34 * k : win.y + layout.barH + 34 * k;
   ctx.globalAlpha = alpha;
   ctx.fillStyle = "rgba(12,12,16,0.82)";
   roundRect(ctx, bx, by + (1 - alpha) * 8 * k, bw, bh, 14 * k);

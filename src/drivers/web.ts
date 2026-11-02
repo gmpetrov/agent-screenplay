@@ -257,11 +257,13 @@ async function runStep(page: Page, step: Step, ts: TakeStep, cursor: Point, ctx:
     });
     if (!inView) {
       const s0 = now();
-      await locator.evaluate((el) => el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" }));
-      await (record ? sleep(750) : sleep(50));
+      const behavior = record ? "smooth" : "instant";
+      await locator.evaluate((el, b) => el.scrollIntoView({ behavior: b as ScrollBehavior, block: "center", inline: "nearest" }), behavior);
+      await waitStill(locator, record ? 2500 : 800);
       (ts.scrolls ??= []).push([s0, now()]);
     }
-    const bb = await locator.boundingBox();
+    const bb = await waitStill(locator, 1500);
+    await waitOpaque(locator, record ? 2000 : 300);
     if (!bb) throw new StepError(ts.index, ts.label, `"${target}" is not visible.`);
     const point = await clickablePoint(locator, bb, ts, target);
     return { locator, box: bb, point };
@@ -409,6 +411,37 @@ async function runStep(page: Page, step: Step, ts: TakeStep, cursor: Point, ctx:
     }
   }
   return cursor;
+}
+
+/** Wait for fade-in animations: the element's effective opacity stops changing (some UIs keep inactive items translucent). */
+async function waitOpaque(locator: Locator, timeoutMs: number) {
+  const deadline = Date.now() + timeoutMs;
+  let prev = -1;
+  while (Date.now() < deadline) {
+    const opacity = await locator
+      .evaluate((el) => {
+        let o = 1;
+        for (let e: Element | null = el; e; e = e.parentElement) o *= Number(getComputedStyle(e).opacity || 1);
+        return o;
+      })
+      .catch(() => 1);
+    if (opacity > 0.97 || (prev >= 0 && Math.abs(opacity - prev) < 0.005 && opacity > 0.2)) return;
+    prev = opacity;
+    await sleep(120);
+  }
+}
+
+/** The element's box once it stopped moving (smooth scrolls, entrance animations). */
+async function waitStill(locator: Locator, timeoutMs: number): Promise<Box | null> {
+  const deadline = Date.now() + timeoutMs;
+  let prev = await locator.boundingBox();
+  while (Date.now() < deadline) {
+    await sleep(80);
+    const cur = await locator.boundingBox();
+    if (prev && cur && Math.abs(prev.x - cur.x) < 0.5 && Math.abs(prev.y - cur.y) < 0.5 && Math.abs(prev.width - cur.width) < 0.5) return cur;
+    prev = cur;
+  }
+  return prev;
 }
 
 /**
