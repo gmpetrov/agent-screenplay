@@ -117,7 +117,7 @@
           "maximum": 3
         },
         "maxZoom": {
-          "description": "Highest automatic zoom (default 1.9).",
+          "description": "Highest automatic zoom (default 1.9). Automatic zooms also stop where the capture runs out of pixels, so a small app window that already fills the video is not zoomed; a number in a step's `zoom` still forces it.",
           "type": "number",
           "minimum": 1,
           "maximum": 4

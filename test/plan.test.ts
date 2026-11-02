@@ -101,3 +101,17 @@ describe("autoZoom", () => {
     expect(autoZoom({ x: 0, y: 0, width: 1400, height: 800 }, 1440, 900, 1.9)).toBe(1);
   });
 });
+
+describe("zoomCeiling", () => {
+  it("keeps the full zoom for a Retina website", async () => {
+    const { zoomCeiling } = await import("../src/render/render.js");
+    // 1440px wide at 2x, shown 1523px wide in a 1080p video.
+    expect(zoomCeiling(1.9, { width: 1440, scale: 2 }, 1523)).toBe(1.9);
+  });
+  it("does not zoom into a small window that already fills the video", async () => {
+    const { zoomCeiling } = await import("../src/render/render.js");
+    // macOS Calculator: 230pt wide at 2x, shown 528px wide.
+    // Shots below 1.02 are dropped, so no zoom happens.
+    expect(zoomCeiling(1.9, { width: 230, scale: 2 }, 528)).toBeLessThanOrEqual(1.02);
+  });
+});

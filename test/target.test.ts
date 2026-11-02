@@ -31,6 +31,7 @@ describe("desktop translation", () => {
     expect(findArgs("Notes", "role=button[name='Save']")).toEqual(["find", "--app", "Notes", "--role", "button", "--name", "Save", "--exact", "--first"]);
     expect(findArgs("Notes", "text=Hello")).toEqual(["find", "--app", "Notes", "--name", "Hello", "--first"]);
     expect(() => findArgs("Notes", "css=.x")).toThrow(/websites only/);
+    expect(findArgs("Notes", "text=Hello", "w-42")).toEqual(["find", "--app", "Notes", "--window-id", "w-42", "--name", "Hello", "--first"]);
   });
 
   it("normalizes key combos", () => {

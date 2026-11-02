@@ -93,19 +93,23 @@ export class AgentDesktop {
   }
 }
 
-/** Translate a scenario target into `agent-desktop find` arguments. */
-export function findArgs(app: string, target: string): string[] {
+/**
+ * Translate a scenario target into `agent-desktop find` arguments. With a window id, the search
+ * stays in the filmed window, so another window of the same app is never clicked or typed into.
+ */
+export function findArgs(app: string, target: string, windowId?: string): string[] {
+  const base = ["find", "--app", app, ...(windowId ? ["--window-id", windowId] : [])];
   const t = parseTarget(target);
   switch (t.kind) {
     case "role":
-      return ["find", "--app", app, "--role", t.role, ...(t.name ? ["--name", t.name, "--exact"] : []), "--first"];
+      return [...base, "--role", t.role, ...(t.name ? ["--name", t.name, "--exact"] : []), "--first"];
     case "text":
-      return ["find", "--app", app, "--name", t.text, "--first"];
+      return [...base, "--name", t.text, "--first"];
     case "label":
     case "placeholder":
-      return ["find", "--app", app, "--name", t.text, "--first"];
+      return [...base, "--name", t.text, "--first"];
     case "testid":
-      return ["find", "--app", app, "--name", t.id, "--first"];
+      return [...base, "--name", t.id, "--first"];
     case "css":
       throw new Error(`css= targets work on websites only, not in desktop apps ("${target}").`);
     case "at":
@@ -162,7 +166,7 @@ class DesktopSession {
     const deadline = Date.now() + timeoutMs;
     let last = "";
     while (true) {
-      const r = await this.ad.call<{ match?: { ref_id: string | null; bounds?: Win["bounds"] } }>(findArgs(this.app, target), { allowFail: true });
+      const r = await this.ad.call<{ match?: { ref_id: string | null; bounds?: Win["bounds"] } }>(findArgs(this.app, target, this.win.id), { allowFail: true });
       const m = r.ok ? r.data?.match : undefined;
       if (m) {
         let b = m.bounds;
@@ -187,7 +191,7 @@ class DesktopSession {
   async candidates(): Promise<string[]> {
     const out: string[] = [];
     for (const role of ["button", "textfield", "link", "checkbox", "tab", "menuitem"]) {
-      const r = await this.ad.call<{ matches?: Array<{ name?: string; role: string }> }>(["find", "--app", this.app, "--role", role, "--limit", "15"], {
+      const r = await this.ad.call<{ matches?: Array<{ name?: string; role: string }> }>(["find", "--app", this.app, "--window-id", this.win.id, "--role", role, "--limit", "15"], {
         allowFail: true,
       });
       for (const m of r.data?.matches ?? []) if (m.name) out.push(`role=${m.role}[name='${m.name.replace(/'/g, "\\'")}']`);
@@ -199,7 +203,13 @@ class DesktopSession {
     if (res.ref) {
       const cmd = opts.right ? "right-click" : opts.double ? "double-click" : "click";
       const headed = cmd === "double-click" || cmd === "right-click" ? ["--headed"] : [];
-      await this.ad.call([...headed, cmd, res.ref]);
+      const r = await this.ad.call([...headed, cmd, res.ref], { allowFail: !headed.length });
+      // Some elements (a text area on macOS) have no click action: click them with the real pointer.
+      // The system cursor is not filmed, so this does not show in the video.
+      if (!r.ok) {
+        if (r.error?.code !== "POLICY_DENIED") throw new Error(`agent-desktop ${cmd}: ${r.error?.code ?? "ERROR"} ${r.error?.message ?? ""}`.trim());
+        await this.ad.call(["--headed", cmd, res.ref]);
+      }
     } else {
       const x = Math.round(this.win.bounds.x + res.box.x + res.box.width / 2);
       const y = Math.round(this.win.bounds.y + res.box.y + res.box.height / 2);
@@ -461,7 +471,7 @@ async function play(
             const v = step.scroll as string;
             const s0 = now();
             if (["down", "up"].includes(v)) {
-              const r = await ds.ad.call<{ match?: { ref_id: string } }>(["find", "--app", ds.app, "--role", "scrollarea", "--first"], { allowFail: true });
+              const r = await ds.ad.call<{ match?: { ref_id: string } }>(["find", "--app", ds.app, "--window-id", ds.win.id, "--role", "scrollarea", "--first"], { allowFail: true });
               const ref = r.data?.match?.ref_id;
               if (!ref) throw new StepError(i, label, "no scrollable area found in the app.");
               await ds.ad.call(["scroll", ref, "--direction", v, "--amount", "5"]);

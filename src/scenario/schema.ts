@@ -148,7 +148,7 @@ export const Style = z
     shadow: z.boolean().optional().describe("Drop shadow under the recording (default true)."),
     cursor: z.enum(["macos", "dot", "none"]).optional().describe("Cursor drawn in the video (default macos)."),
     cursorSize: z.number().min(0.5).max(3).optional().describe("Cursor scale (default 1)."),
-    maxZoom: z.number().min(1).max(4).optional().describe("Highest automatic zoom (default 1.9)."),
+    maxZoom: z.number().min(1).max(4).optional().describe("Highest automatic zoom (default 1.9). Automatic zooms also stop where the capture runs out of pixels, so a small app window that already fills the video is not zoomed; a number in a step's `zoom` still forces it."),
     autoZoom: z.boolean().optional().describe("Zoom automatically on clicks and typing (default true)."),
     captions: z.boolean().optional().describe("Show the `say` text as captions (default true)."),
     accent: z.string().optional().describe("Accent color for clicks, callouts and highlights (default #3b82f6)."),

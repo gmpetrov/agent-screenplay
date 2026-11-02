@@ -27,6 +27,18 @@ export interface RenderResult {
 }
 
 const FADE = 0.4;
+/** How far past the capture's own pixels the camera may magnify before the picture turns soft. */
+const MAX_UPSCALE = 1.15;
+
+/**
+ * Automatic zooms stop where the capture runs out of pixels. A small window (a calculator,
+ * a settings panel) is already enlarged to fill the video, so zooming further only blurs it
+ * and crops what it shows; a large window or a website keeps the full zoom.
+ */
+export function zoomCeiling(maxZoom: number, take: Pick<Take, "width" | "scale">, shownWidth: number): number {
+  const native = (take.width * (take.scale || 1)) / shownWidth;
+  return Math.max(1, Math.min(maxZoom, MAX_UPSCALE * native));
+}
 
 export async function renderTake(loaded: LoadedScenario, take: Take, opts: RenderOptions): Promise<RenderResult> {
   const started = Date.now();
@@ -38,14 +50,14 @@ export async function renderTake(loaded: LoadedScenario, take: Take, opts: Rende
   const OW = scenario.output?.width ?? 1920;
   const OH = scenario.output?.height ?? 1080;
   const fps = scenario.output?.fps ?? 30;
+  const layout = computeLayout(OW, OH, take.width, take.height, style);
   const plan = planTake(take, scenario, {
     fps,
     audio: opts.audio,
     autoZoom: style.autoZoom,
-    maxZoom: style.maxZoom,
+    maxZoom: zoomCeiling(style.maxZoom, take, layout.content.w),
     captions: style.captions,
   });
-  const layout = computeLayout(OW, OH, take.width, take.height, style);
   const staticLayer = buildStaticLayer(layout, style, take.target.kind === "web" ? take.target.url : undefined);
   const bgLayer = createCanvas(OW, OH);
   paintBackground(bgLayer.getContext("2d"), style.background, OW, OH);
