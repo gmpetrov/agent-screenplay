@@ -35,7 +35,8 @@ export function mcpCommand(): { command: string; args: string[] } {
   if (fs.existsSync(path.join(root, ".git"))) {
     return { command: process.execPath, args: [path.join(root, "dist", "cli.js"), "mcp"] };
   }
-  return { command: "npx", args: ["-y", "screenplay", "mcp"] };
+  // The npm package is agent-screenplay ("screenplay" belongs to someone else on npm).
+  return { command: "npx", args: ["-y", "agent-screenplay", "mcp"] };
 }
 
 export async function init(opts: InitOptions = {}): Promise<InitReport> {

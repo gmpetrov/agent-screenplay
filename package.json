@@ -1,11 +1,12 @@
 {
-  "name": "screenplay",
+  "name": "agent-screenplay",
   "version": "0.1.0",
   "description": "Screen Studio-quality screen recordings for AI agents: write a scenario, Screenplay films it and edits it (smooth cursor, auto-zoom, callouts, voice-over).",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "screenplay": "dist/cli.js"
+    "screenplay": "dist/cli.js",
+    "agent-screenplay": "dist/cli.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -35,7 +36,9 @@
     "demo-video",
     "screen-studio",
     "claude-code",
-    "codex"
+    "codex",
+    "agent",
+    "agent-screenplay"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/write-schema.mjs",

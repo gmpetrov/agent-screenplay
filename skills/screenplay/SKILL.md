@@ -7,7 +7,7 @@ description: Make polished screen recordings of a website or desktop app (featur
 
 Screenplay turns a JSON **scenario** into a Screen Studio-style video: it plays the steps in a browser (or a desktop app), films them, then edits the video with a smooth cursor, automatic zooms, click effects, callouts, captions, title cards and an optional voice-over. You write the scenario; Screenplay does the filming and editing. It contains no AI.
 
-Tools: the MCP tools `screenplay_check`, `screenplay_record`, `screenplay_render`, or the CLI `npx screenplay check|record|render <file.json>`.
+Tools: the MCP tools `screenplay_check`, `screenplay_record`, `screenplay_render`, or the CLI `npx agent-screenplay check|record|render <file.json>`.
 
 ## The loop
 
@@ -103,7 +103,7 @@ On any step: `say` (narration: a caption, and speech when voice is on), `zoom` (
 
 Backgrounds: `sunset`, `ocean`, `lavender`, `forest`, `midnight`, `mono`, `paper`, a color (`#0f172a`), an image path, or a gradient `{ "gradient": ["#0ea5e9", "#6366f1"], "angle": 135 }`. `frame: "browser"` adds a minimal browser bar with the URL.
 
-A `screenplay.config.json` in the scenario's folder or a parent sets the style of every video below it (`{ "style": { … } }`); a scenario's own `style` wins, setting by setting. Keep a project's look there rather than repeating it in each scenario, and leave it alone unless asked. When a person wants to choose the look themselves, tell them to run `npx screenplay style <scenario.json>`: it opens a visual editor in their browser (it needs a screen, so do not run it yourself in a headless environment).
+A `screenplay.config.json` in the scenario's folder or a parent sets the style of every video below it (`{ "style": { … } }`); a scenario's own `style` wins, setting by setting. Keep a project's look there rather than repeating it in each scenario, and leave it alone unless asked. When a person wants to choose the look themselves, tell them to run `npx agent-screenplay style <scenario.json>`: it opens a visual editor in their browser (it needs a screen, so do not run it yourself in a headless environment).
 
 Voice-over is **off by default**. With `voice.enabled`, each `say` is spoken (Cartesia, needs `CARTESIA_API_KEY`) and the video waits for each sentence to finish. Without voice, `say` still shows as a caption.
 

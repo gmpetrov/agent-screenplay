@@ -4,7 +4,7 @@ import { chromium, type Browser } from "playwright-core";
 export class BrowserNotFoundError extends Error {
   constructor() {
     super(
-      "No Chromium found for Screenplay. Run `npx screenplay init` (or `npx playwright install chromium`), or set SCREENPLAY_CHROME to a Chrome/Chromium executable.",
+      "No Chromium found for Screenplay. Run `npx agent-screenplay init` (or `npx playwright install chromium`), or set SCREENPLAY_CHROME to a Chrome/Chromium executable.",
     );
   }
 }
