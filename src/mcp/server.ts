@@ -141,9 +141,9 @@ export async function startMcpServer() {
     {
       title: "Edit the last recording again",
       description:
-        "Re-edit the last recording of this scenario without filming: use it after changing text, narration (say), callouts, style, zoom or output. Changing actions needs screenplay_record. Does not touch the app; writes the video files.",
+        "Re-edit the last recording of this scenario without filming: use it after changing text, narration (say), callouts, style, zoom or output. Changing actions needs screenplay_record. Does not touch the app; writes the video files, and sends new narration text to Cartesia when the scenario enables voice-over.",
       inputSchema: recordArgs,
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
     async ({ path: p, scenario, gif, noVoice }, extra) =>
       serialize(async () => {

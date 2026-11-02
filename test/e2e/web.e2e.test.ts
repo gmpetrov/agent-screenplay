@@ -94,6 +94,9 @@ describe("MCP server", () => {
       expect(tool.annotations?.readOnlyHint).toBe(false);
       expect(tool.annotations?.destructiveHint).toBe(true);
     }
+    // Rendering does not touch the app, but may call the voice service.
+    const renderTool = list.find((x) => x.name === "screenplay_render")!;
+    expect(renderTool.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, openWorldHint: true });
     // An invalid inline scenario must not overwrite the file.
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sp-mcp-"));
     const target = path.join(dir, "keep.json");
