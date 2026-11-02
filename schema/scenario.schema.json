@@ -26,7 +26,7 @@
       "type": "boolean"
     },
     "viewport": {
-      "description": "Web: browser size in CSS pixels (default 1440x900).",
+      "description": "Web: browser size in CSS pixels (default: the video's shape with a longer side of 1440, such as 1440x810 for 16:9, so the page fills the frame when padding is 0).",
       "type": "object",
       "properties": {
         "width": {
@@ -90,7 +90,7 @@
       "type": "object",
       "properties": {
         "background": {
-          "description": "A preset (sunset, ocean, lavender, forest, midnight, mono, paper), a color like #0f172a, an image path (relative to the file that sets it), or a gradient { \"gradient\": [\"#0ea5e9\", \"#6366f1\"], \"angle\": 135 }.",
+          "description": "A preset (aurora, sky, dusk, ember, graphite, lagoon, lilac, peach, linen; default aurora), a color like #0f172a, an image path (relative to the file that sets it), or a gradient { \"gradient\": [\"#0ea5e9\", \"#6366f1\"], \"angle\": 135 }.",
           "anyOf": [
             {
               "type": "string"

@@ -63,7 +63,7 @@ program
 program
   .command("style")
   .argument("<scenario>", "scenario JSON file")
-  .description("Open the style editor in your browser: background, margin, corners and shadow, on a frame of the recording.")
+  .description("Open the style editor in your browser: background, padding, corners and shadow, on a frame of the recording.")
   .option("--port <port>", "port to listen on (default: any free port)")
   .option("--no-open", "print the link instead of opening the browser")
   .action(async (file: string, o: { port?: string; open: boolean }) => {

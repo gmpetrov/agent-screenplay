@@ -2,7 +2,6 @@
   "$schema": "../schema/scenario.schema.json",
   "name": "handoff-explainer",
   "url": "demo-app/index.html",
-  "viewport": { "width": 1440, "height": 900 },
   "style": { "background": "sunset" },
   "voice": { "enabled": true, "language": "en" },
   "steps": [
