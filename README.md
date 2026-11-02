@@ -11,18 +11,20 @@ Screenplay contains no AI and needs no model key: your agent does the thinking, 
 ## Install
 
 ```bash
-npx screenplay init
+npx agent-screenplay init
 ```
+
+The npm package is `agent-screenplay`; installed globally (`npm i -g agent-screenplay`), its command is `screenplay`.
 
 `init` downloads Chromium (once), adds the Screenplay MCP server to the agents it finds (Claude Code, Codex, Cursor), and installs the guide that teaches them to make good videos. Then ask your agent for a recording.
 
 Without MCP, any agent that can run commands can use the CLI directly:
 
 ```bash
-npx screenplay guide                    # how to write a good scenario
-npx screenplay check demo.json          # plays the steps fast, without filming
-npx screenplay record demo.json         # films and edits → demo.mp4 + demo.storyboard.png
-npx screenplay render demo.json         # re-edits the last take (style, zoom, text, voice) without filming
+npx agent-screenplay guide                    # how to write a good scenario
+npx agent-screenplay check demo.json          # plays the steps fast, without filming
+npx agent-screenplay record demo.json         # films and edits → demo.mp4 + demo.storyboard.png
+npx agent-screenplay render demo.json         # re-edits the last take (style, zoom, text, voice) without filming
 ```
 
 Requirements: Node 20+. ffmpeg and the drawing library ship with the package.
@@ -52,13 +54,13 @@ Requirements: Node 20+. ffmpeg and the drawing library ship with the package.
 - **Style**: background preset (mesh gradients: `aurora`, `sky`, `dusk`, `ember`, `graphite`, `lagoon`, `lilac`, `peach`, `linen`), your own gradient, a color or an image; padding, corner radius, shadow, cursor style, maximum zoom, browser frame, accent color. See [Style](#style).
 - **Output**: 1920×1080 at 30 fps by default; any size up to 4K, 24 to 60 fps, optional GIF.
 
-The full format is the JSON schema in [`schema/scenario.schema.json`](schema/scenario.schema.json) (`npx screenplay schema`), and the agent guide in [`skills/screenplay/SKILL.md`](skills/screenplay/SKILL.md). Examples are in [`examples/`](examples).
+The full format is the JSON schema in [`schema/scenario.schema.json`](schema/scenario.schema.json) (`npx agent-screenplay schema`), and the agent guide in [`skills/screenplay/SKILL.md`](skills/screenplay/SKILL.md). Examples are in [`examples/`](examples).
 
 `check` and `record` really perform the steps (a "Send" click sends): point scenarios at a demo account or a staging environment.
 
 ## Style
 
-Set the look by eye: `npx screenplay style demo.json` opens an editor in your browser, on a frame of the last recording. Pick a gradient (or make your own), a color or an image (drop it on the page), set the padding, corners and shadow, then save to **this video** or to **all videos**, and render without filming again.
+Set the look by eye: `npx agent-screenplay style demo.json` opens an editor in your browser, on a frame of the last recording. Pick a gradient (or make your own), a color or an image (drop it on the page), set the padding, corners and shadow, then save to **this video** or to **all videos**, and render without filming again.
 
 ![The style editor](docs/style-editor.png)
 
@@ -79,7 +81,7 @@ Set the look by eye: `npx screenplay style demo.json` opens an editor in your br
 
 ## Signing in
 
-- `npx screenplay login https://app.example.com` opens a browser; sign in, press Enter, and the session is saved to `.screenplay/auth.json`. Use it with `"auth": { "storageState": ".screenplay/auth.json" }`. Keep that file out of git.
+- `npx agent-screenplay login https://app.example.com` opens a browser; sign in, press Enter, and the session is saved to `.screenplay/auth.json`. Use it with `"auth": { "storageState": ".screenplay/auth.json" }`. Keep that file out of git.
 - Agents without a screen can sign in with steps: `{ "type": "${EMAIL}", "into": "label=Email" }`, `{ "type": "${PASSWORD}", "into": "label=Password", "secret": true }`. `${VAR}` is read from the environment; `secret` masks the text in captions and logs.
 
 ## Voice-over

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { z } from "zod";
 import { Scenario } from "../dist/scenario/schema.js";
 const schema = z.toJSONSchema(Scenario, { target: "draft-7", unrepresentable: "any" });
-schema.$id = "https://raw.githubusercontent.com/gmpetrov/screenplay/main/schema/scenario.schema.json";
+schema.$id = "https://raw.githubusercontent.com/gmpetrov/agent-screenplay/main/schema/scenario.schema.json";
 schema.title = "Screenplay scenario";
 fs.mkdirSync("schema", { recursive: true });
 fs.writeFileSync("schema/scenario.schema.json", JSON.stringify(schema, null, 2) + "\n");

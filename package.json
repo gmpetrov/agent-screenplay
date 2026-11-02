@@ -1,11 +1,12 @@
 {
-  "name": "screenplay",
+  "name": "agent-screenplay",
   "version": "0.1.0",
   "description": "Screen Studio-quality screen recordings for AI agents: write a scenario, Screenplay films it and edits it (smooth cursor, auto-zoom, callouts, voice-over).",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "screenplay": "dist/cli.js"
+    "screenplay": "dist/cli.js",
+    "agent-screenplay": "dist/cli.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gmpetrov/screenplay.git"
+    "url": "git+https://github.com/gmpetrov/agent-screenplay.git"
   },
   "keywords": [
     "screen-recording",
@@ -35,14 +36,16 @@
     "demo-video",
     "screen-studio",
     "claude-code",
-    "codex"
+    "codex",
+    "agent",
+    "agent-screenplay"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/write-schema.mjs",
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && npm run build",
     "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {
@@ -60,5 +63,9 @@
     "@types/node": "^26.6.6",
     "typescript": "^7.0.2",
     "vitest": "^4.1.12"
+  },
+  "homepage": "https://github.com/gmpetrov/agent-screenplay#readme",
+  "bugs": {
+    "url": "https://github.com/gmpetrov/agent-screenplay/issues"
   }
 }

@@ -1093,6 +1093,6 @@
     "steps"
   ],
   "additionalProperties": false,
-  "$id": "https://raw.githubusercontent.com/gmpetrov/screenplay/main/schema/scenario.schema.json",
+  "$id": "https://raw.githubusercontent.com/gmpetrov/agent-screenplay/main/schema/scenario.schema.json",
   "title": "Screenplay scenario"
 }
