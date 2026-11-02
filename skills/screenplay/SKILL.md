@@ -23,7 +23,7 @@ Tools: the MCP tools `screenplay_check`, `screenplay_record`, `screenplay_render
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/gmpetrov/screenplay/main/schema/scenario.schema.json",
+  "$schema": "https://raw.githubusercontent.com/gmpetrov/agent-screenplay/main/schema/scenario.schema.json",
   "url": "https://app.example.com/inbox",
   "viewport": { "width": 1440, "height": 900 },
   "auth": { "storageState": ".screenplay/auth.json" },
