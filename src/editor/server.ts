@@ -12,10 +12,11 @@ import { BACKGROUNDS, Style, type Style as StyleT } from "../scenario/schema.js"
 import { readTake, type Take } from "../take.js";
 import { openSource } from "../render/sources.js";
 import { PRESETS } from "../render/style.js";
+import { defaultViewport } from "../drivers/web.js";
 
 /**
  * `screenplay style`: a local page to set the look of the videos (background,
- * margin, corners, shadow) on a real frame of the recording, then save it to the
+ * padding, corners, shadow) on a real frame of the recording, then save it to the
  * scenario or to the whole project, and render.
  */
 
@@ -124,7 +125,7 @@ export function state(scenarioFile: string) {
     frame: loaded.scenario.style?.frame ?? "none",
     url: loaded.scenario.url ?? null,
     output: { width: raw.output?.width ?? 1920, height: raw.output?.height ?? 1080 },
-    capture: take ? { width: take.width, height: take.height } : loaded.scenario.url ? (loaded.scenario.viewport ?? { width: 1440, height: 900 }) : null,
+    capture: take ? { width: take.width, height: take.height } : loaded.scenario.url ? (loaded.scenario.viewport ?? defaultViewport(loaded.scenario.output)) : null,
     hasTake: Boolean(take),
     hasVideo: fs.existsSync(loaded.outputs.mp4),
     presets: Object.fromEntries(BACKGROUNDS.map((b) => [b, PRESETS[b]])),

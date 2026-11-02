@@ -117,3 +117,12 @@ describe("style editor server", () => {
     }
   });
 });
+
+describe("default viewport", () => {
+  it("has the video's shape, so the page fills the frame with no padding", async () => {
+    const { defaultViewport } = await import("../src/drivers/web.js");
+    expect(defaultViewport()).toEqual({ width: 1440, height: 810 });
+    expect(defaultViewport({ width: 1080, height: 1080 })).toEqual({ width: 1440, height: 1440 });
+    expect(defaultViewport({ width: 1920, height: 1200 })).toEqual({ width: 1440, height: 900 });
+  });
+});

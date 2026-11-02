@@ -58,7 +58,7 @@ The full format is the JSON schema in [`schema/scenario.schema.json`](schema/sce
 
 ## Style
 
-Set the look by eye: `npx screenplay style demo.json` opens an editor in your browser, on a frame of the last recording. Pick a gradient (or make your own), a color or an image (drop it on the page), set the margin, corners and shadow, then save to **this video** or to **all videos**, and render without filming again.
+Set the look by eye: `npx screenplay style demo.json` opens an editor in your browser, on a frame of the last recording. Pick a gradient (or make your own), a color or an image (drop it on the page), set the padding, corners and shadow, then save to **this video** or to **all videos**, and render without filming again.
 
 ![The style editor](docs/style-editor.png)
 

@@ -2,7 +2,6 @@
   "$schema": "../schema/scenario.schema.json",
   "name": "handoff-demo",
   "url": "demo-app/index.html",
-  "viewport": { "width": 1440, "height": 900 },
   "style": { "background": "ocean" },
   "steps": [
     { "title": "Human handoff, in one click", "subtitle": "Northwind Support · new in 2.4" },

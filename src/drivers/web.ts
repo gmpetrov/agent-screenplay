@@ -32,7 +32,15 @@ export interface CheckReport {
   url?: string;
 }
 
-const DEFAULT_VIEWPORT = { width: 1440, height: 900 };
+/**
+ * The browser size when the scenario sets none: 1440 wide, with the video's shape (1440x810
+ * for 16:9), so with no padding the page fills the whole frame.
+ */
+export function defaultViewport(output?: { width?: number; height?: number }): { width: number; height: number } {
+  const ow = output?.width ?? 1920;
+  const oh = output?.height ?? 1080;
+  return { width: 1440, height: Math.round((1440 * oh) / ow / 2) * 2 };
+}
 const ACTION_TIMEOUT_MS = 15_000;
 
 export class StepError extends Error {
@@ -50,7 +58,7 @@ export async function runWeb(loaded: LoadedScenario, opts: WebRunOptions): Promi
   const { scenario } = loaded;
   const record = opts.mode === "record";
   const log = opts.log ?? (() => {});
-  const viewport = scenario.viewport ?? DEFAULT_VIEWPORT;
+  const viewport = scenario.viewport ?? defaultViewport(scenario.output);
   const scale = record ? (scenario.scale ?? 2) : 1;
   const baseUrl = scenario.url!;
 
