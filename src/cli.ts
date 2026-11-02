@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-import fs from "node:fs";
 import { Command } from "commander";
 import { check, record, render } from "./core.js";
+import { guideText, schemaText } from "./guide.js";
+import { init } from "./init.js";
+import { login } from "./login.js";
 import { ScenarioError } from "./scenario/load.js";
 import { VERSION } from "./version.js";
 
@@ -81,6 +83,60 @@ program
     }
   });
 
+program
+  .command("init")
+  .description("Set up Screenplay: download Chromium, add the MCP server to Claude Code, Codex and Cursor, install the guide.")
+  .option("--no-browser", "do not download Chromium")
+  .option("--no-mcp", "do not add the MCP server to agents")
+  .option("--no-skill", "do not install the guide as a skill")
+  .option("--dry-run", "show what would change")
+  .action(async (o: { browser: boolean; mcp: boolean; skill: boolean; dryRun?: boolean }) => {
+    try {
+      const r = await init({ browser: o.browser, mcp: o.mcp, skill: o.skill, dryRun: o.dryRun, log });
+      for (const d of r.done) log(`✓ ${d}`);
+      for (const s of r.skipped) log(`· ${s}`);
+      for (const w of r.warnings) log(`! ${w}`);
+      log("\nReady. Ask your agent: \"Make a screen recording that shows how <feature> works.\"");
+    } catch (e) {
+      fail(e);
+    }
+  });
+
+program
+  .command("login")
+  .argument("<url>", "page to sign in on")
+  .option("-o, --out <file>", "where to save the session", ".screenplay/auth.json")
+  .description("Open a browser to sign in once; the session is saved for scenarios (auth.storageState).")
+  .action(async (url: string, o: { out: string }) => {
+    try {
+      const file = await login(url, o.out, log);
+      log(`✓ Session saved to ${file}. Use it with "auth": { "storageState": "${o.out}" }. Keep it out of git.`);
+    } catch (e) {
+      fail(e);
+    }
+  });
+
+program
+  .command("mcp")
+  .description("Run the MCP server on stdio (for agents).")
+  .action(async () => {
+    const { startMcpServer } = await import("./mcp/server.js");
+    await startMcpServer();
+  });
+
+program
+  .command("guide")
+  .description("Print the guide to writing good scenarios.")
+  .action(() => {
+    process.stdout.write(guideText());
+  });
+
+program
+  .command("schema")
+  .description("Print the JSON schema of scenarios.")
+  .action(() => {
+    process.stdout.write(schemaText());
+  });
+
 program.parseAsync(process.argv).catch(fail);
 
-void fs;

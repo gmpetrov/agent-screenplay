@@ -570,6 +570,21 @@ async function listCandidates(page: Page): Promise<string[]> {
         }
         if (out.length >= 40) break;
       }
+      // Clickable things that are not buttons or links (list rows, cards): offer their text.
+      for (const el of Array.from(document.querySelectorAll<HTMLElement>("body *"))) {
+        if (out.length >= 60) break;
+        if (getComputedStyle(el).cursor !== "pointer") continue;
+        if (el.parentElement && getComputedStyle(el.parentElement).cursor === "pointer") continue;
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0 || r.bottom < 0 || r.top > window.innerHeight) continue;
+        const first = (el.innerText || "").split("\n").map((l) => l.trim()).find((l) => l.length > 1);
+        if (!first) continue;
+        const t = `text=${first.slice(0, 50)}`;
+        if (!seen.has(t)) {
+          seen.add(t);
+          out.push(t);
+        }
+      }
       return out;
     })
     .catch(() => []);
