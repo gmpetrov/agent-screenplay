@@ -1,0 +1,817 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "description": "Name of the video (default: the file name).",
+      "type": "string"
+    },
+    "url": {
+      "description": "Web: the page to start on.",
+      "type": "string"
+    },
+    "app": {
+      "description": "Desktop: the application to film, as the OS names it.",
+      "type": "string"
+    },
+    "viewport": {
+      "description": "Web: browser size in CSS pixels (default 1440x900).",
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 320,
+          "maximum": 3840
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 240,
+          "maximum": 2160
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "additionalProperties": false
+    },
+    "scale": {
+      "description": "Web: device pixel ratio of the capture (default 2, Retina).",
+      "type": "number",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "colorScheme": {
+      "type": "string",
+      "enum": [
+        "light",
+        "dark"
+      ]
+    },
+    "locale": {
+      "description": "Web: browser locale, e.g. fr-FR.",
+      "type": "string"
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "storageState": {
+          "type": "string",
+          "description": "Path to a session saved by `screenplay login`."
+        }
+      },
+      "required": [
+        "storageState"
+      ],
+      "additionalProperties": false
+    },
+    "hideScrollbars": {
+      "description": "Web: hide scrollbars (default true).",
+      "type": "boolean"
+    },
+    "typingSpeed": {
+      "description": "Typing speed multiplier (default 1, about 14 characters/second).",
+      "type": "number",
+      "minimum": 0.2,
+      "maximum": 5
+    },
+    "style": {
+      "type": "object",
+      "properties": {
+        "background": {
+          "description": "A preset (sunset, ocean, lavender, forest, midnight, mono, paper), a CSS color like #0f172a, or an image path.",
+          "type": "string"
+        },
+        "padding": {
+          "description": "Space around the recording, in output pixels (default 72).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 400
+        },
+        "radius": {
+          "description": "Corner radius of the recording (default 14).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 80
+        },
+        "shadow": {
+          "description": "Drop shadow under the recording (default true).",
+          "type": "boolean"
+        },
+        "cursor": {
+          "description": "Cursor drawn in the video (default macos).",
+          "type": "string",
+          "enum": [
+            "macos",
+            "dot",
+            "none"
+          ]
+        },
+        "cursorSize": {
+          "description": "Cursor scale (default 1).",
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 3
+        },
+        "maxZoom": {
+          "description": "Highest automatic zoom (default 1.9).",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "autoZoom": {
+          "description": "Zoom automatically on clicks and typing (default true).",
+          "type": "boolean"
+        },
+        "captions": {
+          "description": "Show the `say` text as captions (default true).",
+          "type": "boolean"
+        },
+        "accent": {
+          "description": "Accent color for clicks, callouts and highlights (default #3b82f6).",
+          "type": "string"
+        },
+        "frame": {
+          "description": "Draw a minimal browser window bar above web recordings (default none).",
+          "type": "string",
+          "enum": [
+            "none",
+            "browser"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "voice": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Speak each step's `say` text (default false). Needs CARTESIA_API_KEY.",
+          "type": "boolean"
+        },
+        "language": {
+          "description": "Language code, e.g. en, fr, de (default en).",
+          "type": "string"
+        },
+        "id": {
+          "description": "Cartesia voice id (default: a narration voice for the language).",
+          "type": "string"
+        },
+        "speed": {
+          "type": "number",
+          "minimum": 0.6,
+          "maximum": 1.5
+        },
+        "model": {
+          "description": "Cartesia model (default sonic-3.6).",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "description": "Video width (default 1920).",
+          "type": "integer",
+          "minimum": 320,
+          "maximum": 3840
+        },
+        "height": {
+          "description": "Video height (default 1080).",
+          "type": "integer",
+          "minimum": 240,
+          "maximum": 2160
+        },
+        "fps": {
+          "description": "Frames per second (default 30).",
+          "anyOf": [
+            {
+              "type": "number",
+              "const": 24
+            },
+            {
+              "type": "number",
+              "const": 25
+            },
+            {
+              "type": "number",
+              "const": 30
+            },
+            {
+              "type": "number",
+              "const": 50
+            },
+            {
+              "type": "number",
+              "const": 60
+            }
+          ]
+        },
+        "gif": {
+          "description": "Also write a GIF (default false).",
+          "type": "boolean"
+        },
+        "path": {
+          "description": "Where to write the MP4 (default: next to the scenario, same name).",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "steps": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "goto": {
+                "type": "string",
+                "description": "URL or path to open (relative to the scenario url)."
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "goto"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "click": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The element to act on: text=…, role=button[name='…'], label=…, placeholder=…, testid=…, css=… (web only). A bare string means text=."
+              },
+              "button": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "right"
+                ]
+              },
+              "double": {
+                "type": "boolean"
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "click"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Text to type, letter by letter. ${ENV_VAR} is replaced from the environment."
+              },
+              "into": {
+                "description": "Field to click first. Omit to type where the focus already is.",
+                "type": "string",
+                "minLength": 1
+              },
+              "clear": {
+                "description": "Clear the field before typing.",
+                "type": "boolean"
+              },
+              "secret": {
+                "description": "Mask the text in captions, logs and the storyboard.",
+                "type": "boolean"
+              },
+              "submit": {
+                "description": "Press Enter after typing.",
+                "type": "boolean"
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "press": {
+                "type": "string",
+                "description": "Key or chord, e.g. Enter, Escape, Meta+K."
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "press"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "hover": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The element to act on: text=…, role=button[name='…'], label=…, placeholder=…, testid=…, css=… (web only). A bare string means text=."
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "hover"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scroll": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The element to act on: text=…, role=button[name='…'], label=…, placeholder=…, testid=…, css=… (web only). A bare string means text=."
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "down",
+                      "up",
+                      "top",
+                      "bottom"
+                    ]
+                  }
+                ],
+                "description": "An element to bring into view, or a direction (down/up scroll one screen)."
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "scroll"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "select": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The element to act on: text=…, role=button[name='…'], label=…, placeholder=…, testid=…, css=… (web only). A bare string means text=."
+              },
+              "option": {
+                "type": "string"
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "select",
+              "option"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "wait": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The element to act on: text=…, role=button[name='…'], label=…, placeholder=…, testid=…, css=… (web only). A bare string means text=."
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 120
+                  }
+                ],
+                "description": "An element/text to wait for, or a number of seconds. Long waits are sped up in the video."
+              },
+              "timeout": {
+                "description": "Seconds before giving up (default 30).",
+                "type": "number",
+                "minimum": 1,
+                "maximum": 300
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "wait"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "pause": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30,
+                "description": "Seconds to stay still."
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "pause"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "description": "Opening card shown full screen."
+              },
+              "subtitle": {
+                "type": "string"
+              },
+              "duration": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 15
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "title"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "end": {
+                "type": "string",
+                "description": "Closing card shown full screen (result, call to action)."
+              },
+              "subtitle": {
+                "type": "string"
+              },
+              "duration": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 15
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "end"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "callout": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The element to act on: text=…, role=button[name='…'], label=…, placeholder=…, testid=…, css=… (web only). A bare string means text=."
+              },
+              "text": {
+                "type": "string",
+                "description": "Text of the bubble pointing at the element."
+              },
+              "duration": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 15
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "callout",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "highlight": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The element to act on: text=…, role=button[name='…'], label=…, placeholder=…, testid=…, css=… (web only). A bare string means text=."
+              },
+              "text": {
+                "type": "string"
+              },
+              "duration": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 15
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "highlight"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "zoomTo": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Frame the camera on this element without acting on it."
+              },
+              "duration": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 15
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              }
+            },
+            "required": [
+              "zoomTo"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "steps"
+  ],
+  "additionalProperties": false,
+  "$id": "https://raw.githubusercontent.com/gmpetrov/screenplay/main/schema/scenario.schema.json",
+  "title": "Screenplay scenario"
+}

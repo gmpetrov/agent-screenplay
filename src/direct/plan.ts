@@ -77,6 +77,7 @@ export interface PlanOptions {
 const WAIT_KEEP = 0.9; // seconds of a wait shown at normal speed
 const WAIT_RATE = 8; // the rest of the wait plays this many times faster
 const WAIT_MAX = 2.4; // a wait never lasts longer than this in the video
+export const OVERLAY_DELAY = 0.55; // callouts and highlights appear after the camera framed them
 
 export function planTake(take: Take, scenario: Scenario, opts: PlanOptions): Plan {
   const steps = take.steps;
@@ -125,6 +126,8 @@ export function planTake(take: Take, scenario: Scenario, opts: PlanOptions): Pla
   for (const st of steps) {
     const audio = opts.audio.get(st.index);
     if (st.card) {
+      // An opening card starts the video: drop the still lead-in recorded before it.
+      if (pieces.length === 0) sp = st.start;
       emitCapture(st.start);
       const dur = Math.max(st.card.duration, audio ? audio.duration + 0.6 : 0);
       pieces.push({ kind: "card", o0: op, o1: op + dur, step: st });
@@ -183,7 +186,8 @@ export function planTake(take: Take, scenario: Scenario, opts: PlanOptions): Pla
       captions.push({ o0: t.o0 + 0.05, o1: Math.max(t.o1, t.o0 + (audio?.duration ?? 0) + 0.2), text: sc.say });
     }
     if ((st.kind === "callout" || st.kind === "highlight") && st.box) {
-      annotations.push({ kind: st.kind, o0: t.oAction ?? t.o0, o1: t.o1, box: st.box, text: sc.text });
+      // Appear once the camera has had time to frame the element.
+      annotations.push({ kind: st.kind, o0: Math.min(t.o0 + OVERLAY_DELAY, t.o1 - 0.5), o1: t.o1, box: st.box, text: sc.text });
     }
   }
 
@@ -236,14 +240,19 @@ function buildShots(
     const forced = typeof sc.zoom === "number" ? sc.zoom : undefined;
     const isOverlay = st.kind === "callout" || st.kind === "highlight" || st.kind === "zoomTo";
     if (forced === undefined && !opts.autoZoom && st.kind !== "zoomTo") continue;
-    let z = forced ?? autoZoom(st.box, W, H, isOverlay ? Math.min(opts.maxZoom, 1.6) : opts.maxZoom);
-    if (st.kind === "zoomTo" && forced === undefined) z = autoZoom(st.box, W, H, opts.maxZoom);
+    // Typing happens at the start of a field: frame that part rather than a very wide input.
+    const box =
+      st.kind === "type" && st.typed !== undefined && st.box.width > W / 3
+        ? { ...st.box, width: Math.min(st.box.width, Math.max(260, st.typed.length * 7.5 + 60)) }
+        : st.box;
+    let z = forced ?? autoZoom(box, W, H, isOverlay ? Math.min(opts.maxZoom, 1.6) : opts.maxZoom);
+    if (st.kind === "zoomTo" && forced === undefined) z = autoZoom(box, W, H, opts.maxZoom);
     if (z <= 1.02) continue;
     const t = stepTimes[st.index];
-    const begin = srcToOut(st.travelStart ?? st.actionAt ?? st.start) - 0.12;
+    const begin = isOverlay ? t.o0 - 0.1 : srcToOut(st.travelStart ?? st.actionAt ?? st.start) - 0.12;
     let end = t.o1;
     if (st.navigated && st.actionAt !== undefined) end = Math.min(end, srcToOut(st.actionAt) + 0.45);
-    shots.push({ o0: Math.max(0, begin), o1: end, z, cx: st.box.x + st.box.width / 2, cy: st.box.y + st.box.height / 2 });
+    shots.push({ o0: Math.max(0, begin), o1: end, z, cx: box.x + box.width / 2, cy: box.y + box.height / 2 });
   }
   // Stay zoomed between close shots instead of bouncing out and back in.
   for (let i = 0; i + 1 < shots.length; i++) {

@@ -174,7 +174,7 @@ export function drawCapture(
     ctx.globalAlpha = alpha;
     ctx.beginPath();
     ctx.rect(content.x, content.y, content.w, content.h);
-    roundRect(ctx, b.x, b.y, b.w, b.h, 10 * k);
+    roundRect(ctx, b.x, b.y, b.w, b.h, 10 * k, false);
     ctx.fillStyle = "rgba(8,10,20,0.55)";
     ctx.fill("evenodd");
     ctx.restore();

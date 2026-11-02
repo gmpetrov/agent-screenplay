@@ -122,9 +122,9 @@ export function loadFonts() {
   fontsLoaded = true;
 }
 
-export function roundRect(ctx: SKRSContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function roundRect(ctx: SKRSContext2D, x: number, y: number, w: number, h: number, r: number, newPath = true) {
   const rr = Math.max(0, Math.min(r, w / 2, h / 2));
-  ctx.beginPath();
+  if (newPath) ctx.beginPath();
   ctx.moveTo(x + rr, y);
   ctx.arcTo(x + w, y, x + w, y + h, rr);
   ctx.arcTo(x + w, y + h, x, y + h, rr);

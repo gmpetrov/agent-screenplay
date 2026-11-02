@@ -263,7 +263,8 @@ async function runStep(page: Page, step: Step, ts: TakeStep, cursor: Point, ctx:
     }
     const bb = await locator.boundingBox();
     if (!bb) throw new StepError(ts.index, ts.label, `"${target}" is not visible.`);
-    return { locator, box: bb };
+    const point = await clickablePoint(locator, bb, ts, target);
+    return { locator, box: bb, point };
   };
 
   const s = step as Record<string, any>;
@@ -312,7 +313,7 @@ async function runStep(page: Page, step: Step, ts: TakeStep, cursor: Point, ctx:
       let p = cursor;
       if (s.into) {
         const { locator, box, point } = await resolve(s.into);
-        p = await travelTo(box, point ?? { x: box.x + Math.min(box.width / 2, 48), y: box.y + box.height / 2 });
+        p = await travelTo(box, point);
         ts.actionAt = now();
         await page.mouse.click(p.x, p.y);
         if (s.clear && locator) await locator.fill("");
@@ -332,6 +333,16 @@ async function runStep(page: Page, step: Step, ts: TakeStep, cursor: Point, ctx:
         await page.keyboard.type(text);
       }
       ts.actionEnd = now();
+      // Make sure the text landed somewhere: a covered or unfocused field would silently swallow it.
+      const landed = await page.evaluate((t) => {
+        const el = document.activeElement as HTMLInputElement | HTMLElement | null;
+        if (!el || el === document.body) return false;
+        const v = "value" in el && typeof (el as HTMLInputElement).value === "string" ? (el as HTMLInputElement).value : el.textContent ?? "";
+        return v.includes(t.slice(-Math.min(6, t.length)));
+      }, text);
+      if (!landed) {
+        throw new StepError(ts.index, ts.label, "the typed text did not appear in a focused field. Is the field covered, disabled, or not focused? Use `into` to click it first.");
+      }
       if (s.submit) {
         await sleepIf(0.25);
         await page.keyboard.press("Enter");
@@ -391,12 +402,48 @@ async function runStep(page: Page, step: Step, ts: TakeStep, cursor: Point, ctx:
       const { box } = await resolve(s[ts.kind]);
       ts.box = box;
       ts.actionAt = now();
+      // The overlay appears once the camera framed the element (OVERLAY_DELAY), then stays `duration`.
       const d = Math.max(s.duration ?? (ts.kind === "zoomTo" ? 2 : 3), ctx.minDuration);
-      await sleepIf(d);
+      await sleepIf(d + (ts.kind === "zoomTo" ? 0 : 0.55));
       return cursor;
     }
   }
   return cursor;
+}
+
+/**
+ * A point inside the element that really receives the click (nothing covers it).
+ * Prefers the center; for wide fields, a point near the left where text starts.
+ */
+async function clickablePoint(locator: Locator, box: Box, ts: TakeStep, target: string): Promise<Point> {
+  const deadline = Date.now() + 3000;
+  let coveredBy = "";
+  while (true) {
+    const res = await locator.evaluate((el, b) => {
+      const isField = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || (el as HTMLElement).isContentEditable;
+      const xs = isField && b.width > 160 ? [Math.min(b.width / 2, 48), b.width / 2, b.width * 0.25, b.width * 0.75] : [b.width / 2, b.width * 0.3, b.width * 0.7];
+      const ys = [b.height / 2, b.height * 0.3, b.height * 0.7];
+      let blocker = "";
+      for (const dy of ys) {
+        for (const dx of xs) {
+          const x = b.x + dx;
+          const y = b.y + dy;
+          const top = document.elementFromPoint(x, y);
+          if (top && (top === el || el.contains(top) || (top as Element).closest("label")?.contains(el))) return { x, y };
+          if (top && !blocker) {
+            const t = top as HTMLElement;
+            blocker = `<${t.tagName.toLowerCase()}${t.id ? "#" + t.id : ""}${t.className && typeof t.className === "string" ? "." + t.className.trim().split(/\s+/).join(".") : ""}>`;
+          }
+        }
+      }
+      return { blocker };
+    }, box);
+    if ("x" in res) return { x: res.x as number, y: res.y as number };
+    coveredBy = (res as { blocker: string }).blocker;
+    if (Date.now() > deadline) break;
+    await sleep(150);
+  }
+  throw new StepError(ts.index, ts.label, `"${target}" is covered by ${coveredBy || "another element"}, so a click would not reach it.`);
 }
 
 /** After a click or a key: wait for a navigation or network burst, and mark the time as waiting. */

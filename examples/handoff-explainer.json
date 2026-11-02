@@ -1,0 +1,18 @@
+{
+  "$schema": "../schema/scenario.schema.json",
+  "name": "handoff-explainer",
+  "url": "demo-app/index.html",
+  "viewport": { "width": 1440, "height": 900 },
+  "style": { "background": "sunset" },
+  "voice": { "enabled": true, "language": "en" },
+  "steps": [
+    { "title": "Human handoff, in one click", "subtitle": "Northwind Support · new in 2.4", "say": "Meet human handoff, new in Northwind Support." },
+    { "click": "text=Camille Laurent", "say": "When the AI agent can't solve a case, like this double charge, it flags the conversation for a teammate." },
+    { "callout": "role=button[name='Take over']", "text": "Take over from the AI agent", "say": "You'll find it right here." },
+    { "click": "role=button[name='Take over']", "say": "One click, and the conversation is yours. The AI agent steps aside." },
+    { "type": "Hi Camille, I'm on it: your refund is on its way.", "into": "placeholder=Write a reply…", "say": "Reply as you normally would." },
+    { "click": "role=button[name='Send']" },
+    { "highlight": "text=Assigned to you", "text": "Your teammates see it's yours", "say": "And your teammates can see who's handling it, so nobody answers twice." },
+    { "end": "Available today on every plan", "subtitle": "northwind.example/handoff", "say": "Human handoff is available today, on every plan." }
+  ]
+}

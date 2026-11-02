@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { Scenario } from "./schema.js";
 
 export interface LoadedScenario {
@@ -66,6 +67,10 @@ export function loadScenario(file: string, opts: { env?: boolean } = {}): Loaded
   let scenario = parseScenario(raw);
   if (opts.env !== false) scenario = substituteEnv(scenario);
   const dir = path.dirname(abs);
+  // A url without a scheme is a local file, relative to the scenario.
+  if (scenario.url && !/^[a-z][a-z0-9+.-]*:/i.test(scenario.url)) {
+    scenario = { ...scenario, url: pathToFileURL(path.resolve(dir, scenario.url)).toString() };
+  }
   const base = path.basename(abs).replace(/\.json$/i, "").replace(/\.screenplay$/i, "");
   const name = scenario.name ?? base;
   const slug = slugify(name);
