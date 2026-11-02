@@ -14,8 +14,16 @@
       "type": "string"
     },
     "app": {
-      "description": "Desktop: the application to film, as the OS names it.",
+      "description": "Desktop: the application to film, as the OS names it. With \"screen\": true, the app brought to the front first (optional).",
       "type": "string"
+    },
+    "screen": {
+      "description": "Desktop: film the whole main screen instead of one app's window, to show several apps or the menu bar. Everything on screen is filmed (notifications, other windows, the menu bar icons): close or hide what should not be seen.",
+      "type": "boolean"
+    },
+    "hideOthers": {
+      "description": "Desktop, macOS, with \"screen\": true: hide the other apps before filming (Hide Others, ⌥⌘H, in `app`). Default false.",
+      "type": "boolean"
     },
     "viewport": {
       "description": "Web: browser size in CSS pixels (default 1440x900).",
@@ -257,10 +265,78 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
               "goto"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "open": {
+                "type": "string",
+                "description": "Desktop, with \"screen\": true: launch this app or bring it to the front. The next steps act in it."
+              },
+              "say": {
+                "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "zoom": {
+                "description": "false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom).",
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                ]
+              },
+              "hold": {
+                "description": "Extra seconds to stay on the result of this step before the next one.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
+              }
+            },
+            "required": [
+              "open"
             ],
             "additionalProperties": false
           },
@@ -304,6 +380,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
@@ -357,6 +449,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
@@ -393,6 +501,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
@@ -430,6 +554,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
@@ -481,6 +621,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
@@ -521,6 +677,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
@@ -575,6 +747,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
@@ -613,6 +801,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
@@ -709,6 +913,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
@@ -755,6 +975,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [
@@ -797,6 +1033,22 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 30
+              },
+              "app": {
+                "description": "Desktop: the app this step acts in (default: the scenario's app, or the last one opened). Another app than the scenario's needs \"screen\": true; there it also becomes the app the next steps act in.",
+                "type": "string"
+              },
+              "surface": {
+                "description": "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+                "type": "string",
+                "enum": [
+                  "window",
+                  "menubar",
+                  "menu",
+                  "sheet",
+                  "popover",
+                  "alert"
+                ]
               }
             },
             "required": [

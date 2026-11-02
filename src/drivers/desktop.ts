@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { execFile, spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { promisify } from "node:util";
 import type { LoadedScenario } from "../scenario/load.js";
-import { describeStep, stepKind, type Step } from "../scenario/schema.js";
+import { describeStep, stepKind, SURFACES, type Step } from "../scenario/schema.js";
 import { parseTarget } from "../scenario/target.js";
 import type { Box, Point, Take, TakeStep } from "../take.js";
 import { captureFfmpegPath } from "../ffmpeg.js";
@@ -93,23 +93,19 @@ export class AgentDesktop {
   }
 }
 
-/**
- * Translate a scenario target into `agent-desktop find` arguments. With a window id, the search
- * stays in the filmed window, so another window of the same app is never clicked or typed into.
- */
-export function findArgs(app: string, target: string, windowId?: string): string[] {
-  const base = ["find", "--app", app, ...(windowId ? ["--window-id", windowId] : [])];
+/** The role/name part of an `agent-desktop find` query for a scenario target. */
+export function findQuery(target: string): string[] {
   const t = parseTarget(target);
   switch (t.kind) {
     case "role":
-      return [...base, "--role", t.role, ...(t.name ? ["--name", t.name, "--exact"] : []), "--first"];
+      return ["--role", t.role, ...(t.name ? ["--name", t.name, "--exact"] : []), "--first"];
     case "text":
-      return [...base, "--name", t.text, "--first"];
+      return ["--name", t.text, "--first"];
     case "label":
     case "placeholder":
-      return [...base, "--name", t.text, "--first"];
+      return ["--name", t.text, "--first"];
     case "testid":
-      return [...base, "--name", t.id, "--first"];
+      return ["--name", t.id, "--first"];
     case "css":
       throw new Error(`css= targets work on websites only, not in desktop apps ("${target}").`);
     case "at":
@@ -117,23 +113,54 @@ export function findArgs(app: string, target: string, windowId?: string): string
   }
 }
 
+/**
+ * Translate a scenario target into `agent-desktop find` arguments. With a window id, the search
+ * stays in that window, so another window of the same app is never clicked or typed into.
+ */
+export function findArgs(app: string, target: string, windowId?: string): string[] {
+  return ["find", "--app", app, ...(windowId ? ["--window-id", windowId] : []), ...findQuery(target)];
+}
+
 interface Resolved {
   ref?: string;
-  /** Box in window coordinates. */
+  /** Box in the filmed area's coordinates. */
   box: Box;
+}
+
+type Surface = (typeof SURFACES)[number];
+
+/** Where a step acts: an app (default: the current one) and a surface (default: its front window). */
+export interface Where {
+  app?: string;
+  surface?: Surface;
+}
+
+type Bounds = Win["bounds"];
+
+interface Display {
+  bounds: Bounds;
+  scale: number;
+  is_primary: boolean;
 }
 
 class DesktopSession {
   ad = new AgentDesktop();
-  app: string;
-  win!: Win;
+  /** The app steps act in when they name none. With `screen`, `open` and a step's `app` change it. */
+  app?: string;
+  /** The filmed area in screen coordinates: the app's window, or the whole main display. */
+  frame!: Bounds;
+  /** Window recordings: the filmed window. */
+  win?: Win;
   scale = 1;
 
-  constructor(app: string) {
+  constructor(
+    app: string | undefined,
+    readonly screen: boolean,
+  ) {
     this.app = app;
   }
 
-  async open(log: (m: string) => void) {
+  async open(log: (m: string) => void, opts: { hideOthers?: boolean } = {}) {
     if (process.platform === "linux" && !process.env.DISPLAY) {
       throw new Error(
         process.env.WAYLAND_DISPLAY
@@ -142,42 +169,101 @@ class DesktopSession {
       );
     }
     await this.ad.startSession();
-    const apps = await this.ad.call<{ apps: Array<{ name: string }> }>(["list-apps"]);
-    const match = apps.data!.apps.find((a) => a.name.toLowerCase() === this.app.toLowerCase());
-    if (!match) {
-      log(`Launching ${this.app}`);
-      await this.ad.call(["launch", this.app, "--activate"]);
-      await sleep(1500);
-    } else this.app = match.name;
-    const wins = await this.ad.call<Win[]>(["list-windows", "--app", this.app]);
-    const list = (wins.data ?? []).filter((w) => (w as unknown as { visible?: boolean }).visible !== false);
-    if (!list.length) throw new Error(`${this.app} has no visible window.`);
-    this.win = list.find((w) => (w as unknown as { is_focused?: boolean }).is_focused) ?? list[0];
-    await this.ad.call(["--headed", "focus-window", "--window-id", this.win.id], { allowFail: true });
-    const displays = await this.ad.call<Array<{ bounds: Win["bounds"]; scale: number; is_primary: boolean }>>(["list-displays"]);
-    const disp =
-      displays.data?.find((d) => this.win.bounds.x >= d.bounds.x && this.win.bounds.x < d.bounds.x + d.bounds.width) ?? displays.data?.[0];
-    this.scale = disp?.scale ?? 1;
+    if (this.app) await this.activate(this.app, log);
+    const displays = (await this.ad.call<Display[]>(["list-displays"])).data ?? [];
+    if (this.screen) {
+      const disp = displays.find((d) => d.is_primary) ?? displays[0];
+      if (!disp) throw new Error("No display found to film.");
+      this.frame = disp.bounds;
+      this.scale = disp.scale ?? 1;
+      if (opts.hideOthers) {
+        if (process.platform !== "darwin") log("hideOthers works on macOS only: other windows stay visible.");
+        else if (!this.app) throw new Error('hideOthers needs `app`: the app to keep (Hide Others is run from it).');
+        else {
+          await this.ad.call(["press", "--app", this.app, "cmd+alt+h"]);
+          await sleep(500);
+        }
+      }
+    } else {
+      this.win = await this.frontWindow(this.app!);
+      this.frame = this.win.bounds;
+      const b = this.frame;
+      const disp = displays.find((d) => b.x >= d.bounds.x && b.x < d.bounds.x + d.bounds.width) ?? displays[0];
+      this.scale = disp?.scale ?? 1;
+    }
   }
 
-  async resolve(target: string, timeoutMs = 15_000): Promise<Resolved> {
+  /** Launch the app, or bring it to the front; it becomes the app the next steps act in. */
+  async activate(app: string, log: (m: string) => void) {
+    const apps = await this.ad.call<{ apps: Array<{ name: string }> }>(["list-apps"]);
+    const match = apps.data!.apps.find((a) => a.name.toLowerCase() === app.toLowerCase());
+    if (!match) {
+      log(`Launching ${app}`);
+      await this.ad.call(["launch", app, "--activate"]);
+      await sleep(1500);
+      this.app = app;
+    } else this.app = match.name;
+    const win = await this.frontWindow(this.app).catch(() => undefined);
+    if (win) await this.ad.call(["--headed", "focus-window", "--window-id", win.id], { allowFail: true });
+    else if (match) await this.ad.call(["launch", this.app, "--activate"], { allowFail: true });
+  }
+
+  async frontWindow(app: string): Promise<Win> {
+    const wins = await this.ad.call<Win[]>(["list-windows", "--app", app]);
+    const list = (wins.data ?? []).filter((w) => {
+      const f = w as unknown as { visible?: boolean; minimized?: boolean };
+      return f.visible !== false && !f.minimized;
+    });
+    if (!list.length) throw new Error(`${app} has no visible window.`);
+    return list.find((w) => (w as unknown as { is_focused?: boolean }).is_focused) ?? list[0];
+  }
+
+  /** The app a step acts in. */
+  appFor(where: Where): string {
+    const app = where.app ?? this.app;
+    if (!app) throw new Error('Name the app this step acts in: add "app" to the step, or "open" it first.');
+    if (!this.screen && app.toLowerCase() !== this.app!.toLowerCase()) {
+      throw new Error(`This recording films ${this.app}'s window only. To act in ${app} too, film the whole screen with "screen": true.`);
+    }
+    return app;
+  }
+
+  /** `find` arguments that limit the search to where the step acts. */
+  async scope(where: Where): Promise<string[]> {
+    const app = this.appFor(where);
+    const surface = where.surface ?? "window";
+    if (surface !== "window") return ["--app", app, "--surface", surface];
+    const id = this.screen ? (await this.frontWindow(app)).id : this.win!.id;
+    return ["--app", app, "--window-id", id];
+  }
+
+  async resolve(target: string, where: Where = {}, timeoutMs = 15_000): Promise<Resolved> {
     const t = parseTarget(target);
     if (t.kind === "at") return { box: { x: t.x - 12, y: t.y - 12, width: 24, height: 24 } };
+    const query = findQuery(target);
     const deadline = Date.now() + timeoutMs;
     let last = "";
     while (true) {
-      const r = await this.ad.call<{ match?: { ref_id: string | null; bounds?: Win["bounds"] } }>(findArgs(this.app, target, this.win.id), { allowFail: true });
+      let r: Envelope<{ match?: { ref_id: string | null; bounds?: Bounds } }>;
+      try {
+        r = await this.ad.call(["find", ...(await this.scope(where)), ...query], { allowFail: true });
+      } catch (e) {
+        // The app may still be opening its window.
+        if (!/has no visible window/.test((e as Error).message) || Date.now() > deadline) throw e;
+        await sleep(250);
+        continue;
+      }
       const m = r.ok ? r.data?.match : undefined;
       if (m) {
         let b = m.bounds;
         if (m.ref_id) {
-          const g = await this.ad.call<{ value: Win["bounds"] | null }>(["get", m.ref_id, "--property", "bounds"], { allowFail: true });
+          const g = await this.ad.call<{ value: Bounds | null }>(["get", m.ref_id, "--property", "bounds"], { allowFail: true });
           b = g.data?.value ?? b;
         }
         if (b) {
           return {
             ref: m.ref_id ?? undefined,
-            box: { x: b.x - this.win.bounds.x, y: b.y - this.win.bounds.y, width: b.width, height: b.height },
+            box: { x: b.x - this.frame.x, y: b.y - this.frame.y, width: b.width, height: b.height },
           };
         }
       }
@@ -185,13 +271,17 @@ class DesktopSession {
       if (Date.now() > deadline) break;
       await sleep(250);
     }
-    throw new StepError(-1, target, `nothing in ${this.app} matches "${target}" (${last}).`, await this.candidates());
+    const app = this.appFor(where);
+    const place = where.surface && where.surface !== "window" ? `${app}'s ${where.surface}` : app;
+    throw new StepError(-1, target, `nothing in ${place} matches "${target}" (${last}).`, await this.candidates(where));
   }
 
-  async candidates(): Promise<string[]> {
+  async candidates(where: Where = {}): Promise<string[]> {
     const out: string[] = [];
+    const scope = await this.scope(where).catch(() => undefined);
+    if (!scope) return out;
     for (const role of ["button", "textfield", "link", "checkbox", "tab", "menuitem"]) {
-      const r = await this.ad.call<{ matches?: Array<{ name?: string; role: string }> }>(["find", "--app", this.app, "--window-id", this.win.id, "--role", role, "--limit", "15"], {
+      const r = await this.ad.call<{ matches?: Array<{ name?: string; role: string }> }>(["find", ...scope, "--role", role, "--limit", "15"], {
         allowFail: true,
       });
       for (const m of r.data?.matches ?? []) if (m.name) out.push(`role=${m.role}[name='${m.name.replace(/'/g, "\\'")}']`);
@@ -211,14 +301,14 @@ class DesktopSession {
         await this.ad.call(["--headed", cmd, res.ref]);
       }
     } else {
-      const x = Math.round(this.win.bounds.x + res.box.x + res.box.width / 2);
-      const y = Math.round(this.win.bounds.y + res.box.y + res.box.height / 2);
+      const x = Math.round(this.frame.x + res.box.x + res.box.width / 2);
+      const y = Math.round(this.frame.y + res.box.y + res.box.height / 2);
       await this.ad.call(["--headed", "mouse-click", "--xy", `${x},${y}`]);
     }
   }
 
-  async press(combo: string) {
-    await this.ad.call(["press", "--app", this.app, normalizeCombo(combo)]);
+  async press(combo: string, where: Where = {}) {
+    await this.ad.call(["press", "--app", this.appFor(where), normalizeCombo(combo)]);
   }
 }
 
@@ -247,14 +337,14 @@ class Recorder {
 
   constructor(private file: string) {}
 
-  async start(win: Win, scale: number, t0: number) {
+  async start(area: Bounds, scale: number, t0: number) {
     const bin = captureFfmpegPath();
-    const W = Math.round(win.bounds.width * scale) & ~1;
-    const H = Math.round(win.bounds.height * scale) & ~1;
+    const W = Math.round(area.width * scale) & ~1;
+    const H = Math.round(area.height * scale) & ~1;
     let input: string[];
     if (process.platform === "linux") {
-      const x = Math.round(win.bounds.x * scale);
-      const y = Math.round(win.bounds.y * scale);
+      const x = Math.round(area.x * scale);
+      const y = Math.round(area.y * scale);
       input = ["-f", "x11grab", "-draw_mouse", "0", "-framerate", String(this.fps), "-video_size", `${W}x${H}`, "-i", `${process.env.DISPLAY}+${x},${y}`];
       this.crop = { x: 0, y: 0, width: W, height: H };
     } else if (process.platform === "win32") {
@@ -266,9 +356,9 @@ class Recorder {
         "-framerate",
         String(this.fps),
         "-offset_x",
-        String(Math.round(win.bounds.x * scale)),
+        String(Math.round(area.x * scale)),
         "-offset_y",
-        String(Math.round(win.bounds.y * scale)),
+        String(Math.round(area.y * scale)),
         "-video_size",
         `${W}x${H}`,
         "-i",
@@ -278,7 +368,7 @@ class Recorder {
     } else if (process.platform === "darwin") {
       const screen = macScreenIndex(bin);
       input = ["-f", "avfoundation", "-capture_cursor", "0", "-framerate", String(this.fps), "-i", `${screen}:none`];
-      this.crop = { x: Math.round(win.bounds.x * scale), y: Math.round(win.bounds.y * scale), width: W, height: H };
+      this.crop = { x: Math.round(area.x * scale), y: Math.round(area.y * scale), width: W, height: H };
     } else {
       throw new Error(`Desktop recording is not supported on ${process.platform}.`);
     }
@@ -338,7 +428,7 @@ async function play(
 ): Promise<{ take?: Take; check?: CheckReport }> {
   const { scenario } = loaded;
   const record = opts.record;
-  const ds = new DesktopSession(scenario.app!);
+  const ds = new DesktopSession(scenario.app, Boolean(scenario.screen));
   const takeDir = loaded.takeDir;
   if (record) {
     fs.rmSync(takeDir, { recursive: true, force: true });
@@ -350,12 +440,13 @@ async function play(
   let recorder: Recorder | undefined;
   const checks: CheckStepResult[] = [];
   try {
-    await ds.open(opts.log);
-    const W = ds.win.bounds.width;
-    const H = ds.win.bounds.height;
+    await ds.open(opts.log, { hideOthers: scenario.hideOthers });
+    if (ds.screen && record) opts.log("Filming the whole screen: notifications and every visible window will be in the video.");
+    const W = ds.frame.width;
+    const H = ds.frame.height;
     if (record) {
       recorder = new Recorder(path.join(takeDir, "capture.mp4"));
-      await recorder.start(ds.win, ds.scale, t0);
+      await recorder.start(ds.frame, ds.scale, t0);
       await sleep(600);
     }
     let cursor: Point = { x: W * 0.62, y: H * 0.7 };
@@ -369,6 +460,9 @@ async function play(
       const label = describeStep(step);
       opts.log(`${record ? "▶" : "·"} ${i + 1}/${scenario.steps.length} ${label}`);
       const ts: TakeStep = { index: i, kind, label, start: now(), end: 0, waits: [] };
+      // On a whole-screen recording, naming an app also makes it the one the next steps act in.
+      if (ds.screen && step.app) ds.app = step.app;
+      const where: Where = { app: step.app, surface: step.surface };
       const minDuration = opts.minDurations?.[i] ?? 0;
       const travelTo = async (box: Box) => {
         const p = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
@@ -381,7 +475,7 @@ async function play(
       const resolve = async (target: string) => {
         const w0 = now();
         try {
-          const r = await ds.resolve(target);
+          const r = await ds.resolve(target, where);
           if (now() - w0 > 0.5) ts.waits.push([w0, now()]);
           return r;
         } catch (e) {
@@ -402,6 +496,14 @@ async function play(
             break;
           case "goto":
             throw new StepError(i, label, "goto works on websites only; desktop scenarios start with the app already open.");
+          case "open": {
+            if (!ds.screen) throw new StepError(i, label, 'open needs "screen": true: a window recording films one app.');
+            const w0 = now();
+            await ds.activate(step.open, opts.log);
+            await sleepIf(0.6); // let the window come to the front
+            ts.waits.push([w0, now()]);
+            break;
+          }
           case "click":
           case "select": {
             const r = await resolve(step[kind]);
@@ -421,8 +523,8 @@ async function play(
             ts.actionAt = now();
             if (r.ref) await ds.ad.call(["--headed", "hover", r.ref]);
             else {
-              const x = Math.round(ds.win.bounds.x + r.box.x + r.box.width / 2);
-              const y = Math.round(ds.win.bounds.y + r.box.y + r.box.height / 2);
+              const x = Math.round(ds.frame.x + r.box.x + r.box.width / 2);
+              const y = Math.round(ds.frame.y + r.box.y + r.box.height / 2);
               await ds.ad.call(["--headed", "mouse-move", "--xy", `${x},${y}`]);
             }
             break;
@@ -444,14 +546,14 @@ async function play(
             const delays = typingDelays(text, scenario.typingSpeed ?? 1, i + 1);
             if (!record) {
               if (ref) await ds.ad.call(["type", ref, text]);
-              else for (const ch of text) await ds.press(ch === " " ? "space" : ch);
+              else for (const ch of text) await ds.press(ch === " " ? "space" : ch, where);
             } else {
               // Type in small chunks so the text appears progressively, like a person typing.
               for (let k = 0; k < text.length; k++) {
                 const ch = text[k];
                 const t1 = Date.now();
                 if (ref) await ds.ad.call(["type", ref, ch]);
-                else await ds.press(ch === " " ? "space" : ch);
+                else await ds.press(ch === " " ? "space" : ch, where);
                 const spent = (Date.now() - t1) / 1000;
                 await sleep(Math.max(0, delays[k] - spent) * 1000);
               }
@@ -459,24 +561,24 @@ async function play(
             ts.actionEnd = now();
             if (step.submit) {
               await sleepIf(0.25);
-              await ds.press("return");
+              await ds.press("return", where);
             }
             break;
           }
           case "press":
             ts.actionAt = now();
-            await ds.press(step.press);
+            await ds.press(step.press, where);
             break;
           case "scroll": {
             const v = step.scroll as string;
             const s0 = now();
             if (["down", "up"].includes(v)) {
-              const r = await ds.ad.call<{ match?: { ref_id: string } }>(["find", "--app", ds.app, "--window-id", ds.win.id, "--role", "scrollarea", "--first"], { allowFail: true });
+              const r = await ds.ad.call<{ match?: { ref_id: string } }>(["find", ...(await ds.scope(where)), "--role", "scrollarea", "--first"], { allowFail: true });
               const ref = r.data?.match?.ref_id;
               if (!ref) throw new StepError(i, label, "no scrollable area found in the app.");
               await ds.ad.call(["scroll", ref, "--direction", v, "--amount", "5"]);
             } else if (["top", "bottom"].includes(v)) {
-              await ds.press(v === "top" ? "home" : "end");
+              await ds.press(v === "top" ? "home" : "end", where);
             } else {
               const r = await resolve(v);
               if (r.ref) await ds.ad.call(["scroll-to", r.ref], { allowFail: true });
@@ -488,7 +590,7 @@ async function play(
           case "wait": {
             const w0 = now();
             if (typeof step.wait === "number") await sleepIf(step.wait);
-            else await ds.resolve(step.wait, (step.timeout ?? 30) * 1000);
+            else await ds.resolve(step.wait, where, (step.timeout ?? 30) * 1000);
             ts.waits.push([w0, now()]);
             break;
           }
@@ -537,7 +639,7 @@ async function play(
       name: loaded.name,
       recordedAt: new Date().toISOString(),
       platform: process.platform,
-      target: { kind: "desktop", app: ds.app },
+      target: { kind: "desktop", app: scenario.app ?? "", ...(ds.screen ? { screen: true } : {}) },
       width: W,
       height: H,
       scale: ds.scale,

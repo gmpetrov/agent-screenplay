@@ -21,6 +21,8 @@ export function captureInputs(scenario: Scenario): { setup: string; steps: strin
     scenario.auth ?? null,
     scenario.hideScrollbars ?? null,
     scenario.typingSpeed ?? null,
+    // Appended only when set, so takes recorded before these options existed keep their fingerprint.
+    ...(scenario.screen || scenario.hideOthers ? [scenario.screen ?? null, scenario.hideOthers ?? null] : []),
   ]);
   const steps = scenario.steps.map((step) => {
     const kind = stepKind(step);
@@ -51,7 +53,7 @@ export function captureMismatch(
     if (stepKind(scenario.steps[i]) !== recordedKinds[i]) return `step ${i + 1} (${describeStep(scenario.steps[i])}) changed`;
   }
   if (!recorded) return undefined; // takes from before fingerprints: kinds are all we can compare
-  if (recorded.setup !== now.setup) return "the page, app, viewport, session or typing speed changed";
+  if (recorded.setup !== now.setup) return "the page, app, screen mode, viewport, session or typing speed changed";
   for (let i = 0; i < now.steps.length; i++) {
     if (recorded.steps[i] !== now.steps[i]) return `step ${i + 1} (${describeStep(scenario.steps[i])}) changed`;
   }
