@@ -83,6 +83,10 @@ Use `"app": "<name>"` instead of `"url"`. The steps are played through the opera
 
 Desktop recordings need a real screen: they cannot run in a headless container. Websites can.
 
+### The whole screen
+
+`"screen": true` films the whole main screen instead of one window, for videos that go from one app to another or use the menu bar. `{ "open": "<app>" }` launches an app or brings it to the front, a step's `"app"` acts in another app, and `"surface": "menubar"` (or `menu`, `sheet`, `popover`, `alert`) finds elements outside the app's window. Everything on screen is filmed, desktop icons and notifications included: tidy the screen first; on macOS `"hideOthers": true` hides the other apps.
+
 ## How it works
 
 ```
