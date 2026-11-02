@@ -50,13 +50,26 @@ describe("scenario", () => {
   });
 
   it("resolves a relative url to a local file and names outputs after the scenario", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sp-"));
+    // Paths are real paths: on macOS the temp folder is a symlink into /private.
+    const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "sp-")));
     const file = path.join(dir, "My Démo.json");
     fs.writeFileSync(file, JSON.stringify({ url: "app/index.html", steps: [{ pause: 1 }] }));
     const l = loadScenario(file);
     expect(l.scenario.url).toMatch(/^file:\/\/.*\/app\/index\.html$/);
     expect(l.outputs.mp4).toBe(path.join(dir, "my-demo.mp4"));
     expect(l.takeDir).toBe(path.join(dir, ".screenplay", "takes", "my-demo"));
+  });
+
+  it("loads a scenario reached through a symlink as the same scenario", () => {
+    const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "sp-")));
+    fs.writeFileSync(path.join(dir, "a.json"), JSON.stringify({ url: "app/index.html", steps: [{ pause: 1 }] }));
+    const link = `${dir}-link`;
+    fs.symlinkSync(dir, link);
+    try {
+      expect(loadScenario(path.join(link, "a.json")).scenario.url).toBe(loadScenario(path.join(dir, "a.json")).scenario.url);
+    } finally {
+      fs.unlinkSync(link);
+    }
   });
 
   it("slugifies names", () => {

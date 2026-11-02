@@ -49,12 +49,33 @@ Requirements: Node 20+. ffmpeg and the drawing library ship with the package.
 - **Targets** name elements the way people see them: `text=…`, `role=button[name='…']`, `label=…`, `placeholder=…`, `testid=…`, `css=…` (web only), `at=x,y` (desktop apps without accessible elements only).
 - **Actions**: `goto`, `click`, `type`, `press`, `hover`, `scroll`, `select`, `wait`, `pause`.
 - **Direction**: `title` and `end` cards, `callout` (a bubble pointing at an element), `highlight` (spotlight), `zoomTo`, and on any step `say` (caption and voice), `zoom`, `hold`.
-- **Style**: background preset (`sunset`, `ocean`, `lavender`, `forest`, `midnight`, `mono`, `paper`), color or image; padding, corner radius, shadow, cursor style, maximum zoom, browser frame, accent color.
+- **Style**: background preset (`sunset`, `ocean`, `lavender`, `forest`, `midnight`, `mono`, `paper`), your own gradient, a color or an image; padding, corner radius, shadow, cursor style, maximum zoom, browser frame, accent color. See [Style](#style).
 - **Output**: 1920×1080 at 30 fps by default; any size up to 4K, 24 to 60 fps, optional GIF.
 
 The full format is the JSON schema in [`schema/scenario.schema.json`](schema/scenario.schema.json) (`npx screenplay schema`), and the agent guide in [`skills/screenplay/SKILL.md`](skills/screenplay/SKILL.md). Examples are in [`examples/`](examples).
 
 `check` and `record` really perform the steps (a "Send" click sends): point scenarios at a demo account or a staging environment.
+
+## Style
+
+Set the look by eye: `npx screenplay style demo.json` opens an editor in your browser, on a frame of the last recording. Pick a gradient (or make your own), a color or an image (drop it on the page), set the margin, corners and shadow, then save to **this video** or to **all videos**, and render without filming again.
+
+![The style editor](docs/style-editor.png)
+
+"All videos" writes `screenplay.config.json`, which applies to every scenario in its folder and below; a scenario's own `style` wins, setting by setting. The same settings by hand:
+
+```json
+{
+  "style": {
+    "background": { "gradient": ["#0ea5e9", "#6366f1"], "angle": 135 },
+    "padding": 96,
+    "radius": 20,
+    "shadow": true
+  }
+}
+```
+
+`background` is a preset name, a color (`"#0f172a"`), an image path (relative to the file that sets it), or `{ "gradient": [2 to 4 colors], "angle": degrees }`.
 
 ## Signing in
 

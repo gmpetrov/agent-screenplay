@@ -59,8 +59,10 @@ export function parseScenario(raw: unknown): Scenario {
 }
 
 export function loadScenario(file: string, opts: { env?: boolean } = {}): LoadedScenario {
-  const abs = path.resolve(file);
-  if (!fs.existsSync(abs)) throw new ScenarioError(`Scenario not found: ${abs}`);
+  const given = path.resolve(file);
+  if (!fs.existsSync(given)) throw new ScenarioError(`Scenario not found: ${given}`);
+  // The real path, so the same scenario reached through a symlink (macOS /tmp is /private/tmp) is the same scenario.
+  const abs = fs.realpathSync(given);
   let raw: unknown;
   try {
     raw = JSON.parse(fs.readFileSync(abs, "utf8"));

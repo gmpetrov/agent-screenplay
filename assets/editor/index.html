@@ -129,7 +129,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid rgba(255,255,255,
 @keyframes spin { to { transform: rotate(360deg); } }
 kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
 
-.toast { position: fixed; left: calc((100% - 320px) / 2); bottom: 24px; transform: translate(-50%, 8px); opacity: 0; padding: 9px 14px; border-radius: 10px; background: var(--raised); box-shadow: 0 0 0 1px var(--line-2), 0 10px 30px rgba(0,0,0,.5); font-size: 13px; pointer-events: none; transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); max-width: 60vw; }
+.toast { position: fixed; left: calc((100% - 320px) / 2); top: 14px; transform: translate(-50%, -8px); opacity: 0; padding: 9px 14px; border-radius: 10px; background: var(--raised); box-shadow: 0 0 0 1px var(--line-2), 0 10px 30px rgba(0,0,0,.5); font-size: 13px; pointer-events: none; transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); max-width: 60vw; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 .toast.err { color: #fca5a5; }
 
@@ -230,7 +230,7 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
 const TOKEN = "__TOKEN__";
 const $ = (id) => document.getElementById(id);
 const api = (p, o = {}) => fetch(p, { ...o, headers: { "x-token": TOKEN, ...(o.headers || {}) } });
-const COLORS = ["#0a0a0a", "#0f172a", "#1e1b4b", "#18181b", "#f8fafc", "#f5f5f4", "#fef3c7", "#dbeafe", "#ede9fe", "#dcfce7"];
+const COLORS = ["#0a0a0a", "#0f172a", "#1e1b4b", "#f8fafc", "#f5f5f4", "#fef3c7", "#dbeafe", "#ede9fe", "#dcfce7"];
 
 let S;                 // state from the server
 let style;             // what the editor shows: { background, padding, radius, shadow }
@@ -436,7 +436,7 @@ function sync() {
   const c = currentStops(), a = c.stops[0], z = c.stops[c.stops.length - 1];
   $("s1").value = a; $("s1i").style.background = a; $("s1t").textContent = a;
   $("s2").value = z; $("s2i").style.background = z; $("s2t").textContent = z;
-  $("angle").value = c.angle; $("angleV").textContent = c.angle + "°"; $("dial").style.setProperty("--a", c.angle + "deg");
+  $("angle").value = c.angle; $("angle").style.setProperty("--p", (100 * c.angle) / 360 + "%"); $("angleV").textContent = c.angle + "°"; $("dial").style.setProperty("--a", c.angle + "deg");
   document.querySelectorAll("#colors .sw[data-v]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === bg)));
   const hex = k === "color" ? bg : (lastColor || "#0f172a");
   if (document.activeElement !== $("hex")) $("hex").value = hex;
@@ -450,7 +450,8 @@ function sync() {
   }
   $("shadow").setAttribute("aria-checked", String(style.shadow));
   const file = target === "project" ? S.configFile : S.scenarioFile;
-  $("dest").textContent = (target === "project" ? (S.configExists ? "Saves to " : "Creates ") : "Saves to ") + file.split(/[\\/]/).pop() + (target === "project" ? " · used by every video in this folder" : "");
+  $("dest").textContent = (target === "project" ? (S.configExists ? "Saves to " : "Creates ") : "Saves to ") + file.split(/[\\/]/).pop();
+  $("dest").title = file;
   document.body.classList.toggle("isDirty", JSON.stringify(style) !== saved);
   $("saveBtn").classList.toggle("isDirty", JSON.stringify(style) !== saved);
 }

@@ -101,7 +101,9 @@ On any step: `say` (narration: a caption, and speech when voice is on), `zoom` (
 "output": { "width": 1920, "height": 1080, "fps": 30, "gif": false }
 ```
 
-Backgrounds: `sunset`, `ocean`, `lavender`, `forest`, `midnight`, `mono`, `paper`, a color (`#0f172a`) or an image path. `frame: "browser"` adds a minimal browser bar with the URL.
+Backgrounds: `sunset`, `ocean`, `lavender`, `forest`, `midnight`, `mono`, `paper`, a color (`#0f172a`), an image path, or a gradient `{ "gradient": ["#0ea5e9", "#6366f1"], "angle": 135 }`. `frame: "browser"` adds a minimal browser bar with the URL.
+
+A `screenplay.config.json` in the scenario's folder or a parent sets the style of every video below it (`{ "style": { … } }`); a scenario's own `style` wins, setting by setting. Keep a project's look there rather than repeating it in each scenario, and leave it alone unless asked. When a person wants to choose the look themselves, tell them to run `npx screenplay style <scenario.json>`: it opens a visual editor in their browser (it needs a screen, so do not run it yourself in a headless environment).
 
 Voice-over is **off by default**. With `voice.enabled`, each `say` is spoken (Cartesia, needs `CARTESIA_API_KEY`) and the video waits for each sentence to finish. Without voice, `say` still shows as a caption.
 
