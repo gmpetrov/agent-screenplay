@@ -1,0 +1,115 @@
+# Screenplay
+
+**Screen Studio-quality screen recordings, made by your AI agent.**
+
+Ask Claude Code, Codex, Cursor or any agent: *"Make a video that shows how human handoff works"*. The agent explores your app and writes a short **scenario**; Screenplay plays it in a browser (or a desktop app), films it, and edits the video like Screen Studio would: smooth cursor, automatic zooms that follow the action, click effects, callouts, spotlight, captions, title cards, and an optional voice-over.
+
+![Storyboard of an example video](docs/handoff-storyboard.png)
+
+Screenplay contains no AI and needs no model key: your agent does the thinking, Screenplay does the filming and editing.
+
+## Install
+
+```bash
+npx screenplay init
+```
+
+`init` downloads Chromium (once), adds the Screenplay MCP server to the agents it finds (Claude Code, Codex, Cursor), and installs the guide that teaches them to make good videos. Then ask your agent for a recording.
+
+Without MCP, any agent that can run commands can use the CLI directly:
+
+```bash
+npx screenplay guide                    # how to write a good scenario
+npx screenplay check demo.json          # plays the steps fast, without filming
+npx screenplay record demo.json         # films and edits → demo.mp4 + demo.storyboard.png
+npx screenplay render demo.json         # re-edits the last take (style, zoom, text, voice) without filming
+```
+
+Requirements: Node 20+. ffmpeg and the drawing library ship with the package.
+
+## A scenario
+
+```json
+{
+  "url": "https://app.example.com/inbox",
+  "style": { "background": "ocean" },
+  "steps": [
+    { "title": "Human handoff, in one click", "subtitle": "New in 2.4" },
+    { "click": "text=Camille Laurent", "say": "When the AI agent gets stuck, the conversation lands in your inbox." },
+    { "callout": "role=button[name='Take over']", "text": "Take over from the AI agent" },
+    { "click": "role=button[name='Take over']", "say": "One click, and the conversation is yours." },
+    { "type": "Hi Camille, I'm on it.", "into": "placeholder=Write a reply…" },
+    { "click": "role=button[name='Send']" },
+    { "highlight": "text=Assigned to you", "text": "Your teammates see it's yours" },
+    { "end": "Available today on every plan" }
+  ]
+}
+```
+
+- **Targets** name elements the way people see them: `text=…`, `role=button[name='…']`, `label=…`, `placeholder=…`, `testid=…`, `css=…` (web only), `at=x,y` (desktop apps without accessible elements only).
+- **Actions**: `goto`, `click`, `type`, `press`, `hover`, `scroll`, `select`, `wait`, `pause`.
+- **Direction**: `title` and `end` cards, `callout` (a bubble pointing at an element), `highlight` (spotlight), `zoomTo`, and on any step `say` (caption and voice), `zoom`, `hold`.
+- **Style**: background preset (`sunset`, `ocean`, `lavender`, `forest`, `midnight`, `mono`, `paper`), color or image; padding, corner radius, shadow, cursor style, maximum zoom, browser frame, accent color.
+- **Output**: 1920×1080 at 30 fps by default; any size up to 4K, 24 to 60 fps, optional GIF.
+
+The full format is the JSON schema in [`schema/scenario.schema.json`](schema/scenario.schema.json) (`npx screenplay schema`), and the agent guide in [`skills/screenplay/SKILL.md`](skills/screenplay/SKILL.md). Examples are in [`examples/`](examples).
+
+`check` and `record` really perform the steps (a "Send" click sends): point scenarios at a demo account or a staging environment.
+
+## Signing in
+
+- `npx screenplay login https://app.example.com` opens a browser; sign in, press Enter, and the session is saved to `.screenplay/auth.json`. Use it with `"auth": { "storageState": ".screenplay/auth.json" }`. Keep that file out of git.
+- Agents without a screen can sign in with steps: `{ "type": "${EMAIL}", "into": "label=Email" }`, `{ "type": "${PASSWORD}", "into": "label=Password", "secret": true }`. `${VAR}` is read from the environment; `secret` masks the text in captions and logs.
+
+## Voice-over
+
+Off by default. Turn it on per scenario:
+
+```json
+"voice": { "enabled": true, "language": "fr" }
+```
+
+Each step's `say` is spoken with [Cartesia](https://cartesia.ai) (set `CARTESIA_API_KEY`), and the video waits for each sentence to finish, so the voice sets the pace. Narration is cached: re-rendering with unchanged text costs nothing. `voice.id` picks another voice, `voice.speed` its pace. Without voice, `say` still shows as a caption.
+
+## Desktop apps
+
+Use `"app": "<name>"` instead of `"url"`. The steps are played through the operating system's accessibility APIs by [agent-desktop](https://github.com/vercel-labs/agent-desktop) (installed with Screenplay), and the window is filmed with ffmpeg without the system cursor; the editing is the same as for websites.
+
+| | Needs |
+|---|---|
+| macOS | Allow your terminal or agent app in System Settings → Privacy & Security → **Screen Recording** and **Accessibility** |
+| Windows | Nothing |
+| Linux | An **X11** session with the AT-SPI accessibility bus (standard on GNOME). Wayland is not supported: it blocks screen capture and synthetic input by design |
+
+Desktop recordings need a real screen: they cannot run in a headless container. Websites can.
+
+## How it works
+
+```
+scenario.json ──▶ play + film ──────────────────▶ take (frames + timeline of actions)
+                  web: Playwright, headless Chromium          │
+                  desktop: agent-desktop + ffmpeg             ▼
+                                                  edit: time remap (long waits sped up),
+                                                  camera (spring zooms), cursor path,
+                                                  overlays, captions, voice track
+                                                              │
+                                                              ▼
+                                                  draw each frame (Skia) → ffmpeg → MP4
+```
+
+Screenplay knows exactly where and when each click happens, and the box of every element it acts on, so zooms are framed on the element instead of guessed from mouse movement. The cursor is drawn during editing, along a smooth human-like path.
+
+## Development
+
+```bash
+npm install
+npm run build
+npm test                 # unit tests
+npm run test:e2e         # records a real scenario in headless Chromium and talks to the MCP server
+```
+
+`examples/demo-app` is a small web app for trying scenarios; `examples/desktop-app/notes.py` is a GTK app for desktop recording on Linux.
+
+## License
+
+MIT. Bundled: [Inter](https://rsms.me/inter/) (SIL Open Font License), ffmpeg through `ffmpeg-static` (GPL), agent-desktop (Apache-2.0).

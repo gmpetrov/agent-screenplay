@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Northwind Support — Inbox</title>
+<style>
+  @font-face { font-family: "InterLocal"; src: url("../../assets/fonts/Inter-Regular.ttf"); font-weight: 400; }
+  @font-face { font-family: "InterLocal"; src: url("../../assets/fonts/Inter-Medium.ttf"); font-weight: 500; }
+  @font-face { font-family: "InterLocal"; src: url("../../assets/fonts/Inter-SemiBold.ttf"); font-weight: 600; }
+  @font-face { font-family: "InterLocal"; src: url("../../assets/fonts/Inter-Bold.ttf"); font-weight: 700; }
+  :root {
+    --bg: #f7f7f8; --panel: #ffffff; --line: #ececef; --text: #18181b; --muted: #71717a;
+    --accent: #4f46e5; --accent-soft: #eef2ff; --green: #16a34a; --green-soft: #dcfce7; --amber: #b45309; --amber-soft: #fef3c7;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: "InterLocal", system-ui, sans-serif; color: var(--text); background: var(--bg); font-size: 14px; display: flex; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; cursor: pointer; }
+  .sidebar { width: 232px; background: #fbfbfc; border-right: 1px solid var(--line); padding: 18px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; font-weight: 700; font-size: 15px; }
+  .logo { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #a855f7); display: grid; place-items: center; color: white; font-size: 14px; }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; color: #3f3f46; font-weight: 500; }
+  .nav.active { background: var(--accent-soft); color: var(--accent); }
+  .badge { font-size: 12px; background: var(--accent); color: white; border-radius: 999px; padding: 1px 8px; font-weight: 600; }
+  .nav .count { color: var(--muted); font-size: 12px; }
+  .section { margin: 18px 10px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #a1a1aa; font-weight: 600; }
+  .list { width: 360px; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+  .list header { padding: 18px 18px 12px; border-bottom: 1px solid var(--line); }
+  .list h1 { font-size: 18px; margin: 0 0 12px; }
+  .search { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 9px; padding: 9px 12px; font: inherit; outline: none; }
+  .conv { display: flex; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background .15s; }
+  .conv:hover { background: #fafafa; }
+  .conv.selected { background: var(--accent-soft); }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: white; font-weight: 600; flex: none; }
+  .conv .meta { flex: 1; min-width: 0; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .name { font-weight: 600; }
+  .time { color: var(--muted); font-size: 12px; }
+  .preview { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+  .tag { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); }
+  main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .head { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .who { display: flex; align-items: center; gap: 12px; }
+  .who small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .status { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); display: inline-flex; align-items: center; gap: 6px; }
+  .status.mine { background: var(--green-soft); color: var(--green); }
+  .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .primary { background: var(--accent); color: white; border: 0; border-radius: 9px; padding: 9px 16px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); transition: transform .1s, background .15s; }
+  .primary:hover { background: #4338ca; }
+  .primary:active { transform: scale(.97); }
+  .primary[disabled] { background: #c7c7d1; cursor: default; }
+  .ghost { background: white; border: 1px solid var(--line); border-radius: 9px; padding: 8px 14px; font-weight: 500; }
+  .thread { flex: 1; overflow: auto; padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { max-width: 62%; padding: 11px 14px; border-radius: 14px; line-height: 1.45; }
+  .msg.in { background: white; border: 1px solid var(--line); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .msg.bot { background: #f4f4f5; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .msg.me { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 4px; animation: pop .25s ease-out; }
+  .msg .by { font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  .msg.me .by { color: #c7d2fe; }
+  .note { align-self: center; font-size: 12px; color: var(--muted); background: white; border: 1px dashed #d4d4d8; padding: 6px 12px; border-radius: 999px; }
+  @keyframes pop { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .composer { padding: 16px 24px 20px; background: var(--panel); border-top: 1px solid var(--line); display: flex; gap: 10px; }
+  .composer input { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: inherit; outline: none; transition: border-color .15s, box-shadow .15s; }
+  .composer input:focus { border-color: #a5b4fc; box-shadow: 0 0 0 3px #e0e7ff; }
+  .composer input:disabled { background: #fafafa; }
+  .empty { margin: auto; color: var(--muted); text-align: center; }
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translate(-50%, 20px); opacity: 0; background: #18181b; color: white; padding: 12px 18px; border-radius: 12px; font-weight: 500; transition: all .3s ease; box-shadow: 0 10px 30px rgba(0,0,0,.2); pointer-events: none; }
+  .toast.show { transform: translate(-50%, 0); opacity: 1; }
+  .details { width: 280px; background: var(--panel); border-left: 1px solid var(--line); padding: 22px 20px; }
+  .details h3 { font-size: 12px; text-transform: uppercase; color: #a1a1aa; letter-spacing: .06em; margin: 0 0 12px; }
+  .kv { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+  .kv b { color: var(--text); font-weight: 500; }
+</style>
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="brand"><div class="logo">N</div>Northwind Support</div>
+    <div class="nav active">Inbox <span class="badge">12</span></div>
+    <div class="nav">Assigned to me <span class="count">3</span></div>
+    <div class="nav">AI agent <span class="count">48</span></div>
+    <div class="nav">Resolved <span class="count">1,204</span></div>
+    <div class="section">Channels</div>
+    <div class="nav">Website chat</div>
+    <div class="nav">WhatsApp</div>
+    <div class="nav">Email</div>
+    <div class="section">Workspace</div>
+    <div class="nav">Knowledge base</div>
+    <div class="nav">Settings</div>
+  </nav>
+  <section class="list">
+    <header><h1>Inbox</h1><input class="search" placeholder="Search conversations" /></header>
+    <div id="convs"></div>
+  </section>
+  <main id="main"><div class="empty">Select a conversation</div></main>
+  <aside class="details" id="details"></aside>
+  <div class="toast" id="toast"></div>
+<script>
+  const convs = [
+    { id: 1, name: "Camille Laurent", color: "#f97316", time: "2m", preview: "I was charged twice for my March order…", tag: "Needs a human", plan: "Pro", country: "France", orders: 14,
+      msgs: [["in", "Hi! I was charged twice for my March order #4821. Can you refund one of them?"], ["bot", "I'm sorry about that, Camille. I can see two payments for order #4821. Refunds above €100 need a teammate — I've asked one to step in."], ["note", "AI agent requested a human · 2 min ago"]] },
+    { id: 2, name: "Jonas Becker", color: "#0ea5e9", time: "9m", preview: "How do I connect my Shopify store?", plan: "Starter", country: "Germany", orders: 2, msgs: [["in", "How do I connect my Shopify store?"], ["bot", "Go to Settings → Integrations → Shopify and click Connect."]] },
+    { id: 3, name: "Aiko Tanaka", color: "#10b981", time: "21m", preview: "Thanks, that worked perfectly!", plan: "Pro", country: "Japan", orders: 31, msgs: [["in", "Thanks, that worked perfectly!"]] },
+    { id: 4, name: "Lucas Martin", color: "#8b5cf6", time: "1h", preview: "Can I change the delivery address?", plan: "Business", country: "Belgium", orders: 7, msgs: [["in", "Can I change the delivery address?"]] },
+    { id: 5, name: "Sofia Rossi", color: "#ec4899", time: "3h", preview: "The invoice PDF won't download", tag: "Needs a human", plan: "Pro", country: "Italy", orders: 11, msgs: [["in", "The invoice PDF won't download"]] },
+    { id: 6, name: "Noah Williams", color: "#64748b", time: "5h", preview: "Do you ship to Canada?", plan: "Starter", country: "Canada", orders: 1, msgs: [["in", "Do you ship to Canada?"]] },
+  ];
+  const state = { selected: null, mine: new Set() };
+  const $ = (s) => document.querySelector(s);
+  const initials = (n) => n.split(" ").map((p) => p[0]).join("");
+  function renderList() {
+    $("#convs").innerHTML = convs.map((c) => `
+      <div class="conv ${state.selected === c.id ? "selected" : ""}" data-id="${c.id}">
+        <div class="avatar" style="background:${c.color}">${initials(c.name)}</div>
+        <div class="meta"><div class="row"><span class="name">${c.name}</span><span class="time">${c.time}</span></div>
+        <div class="preview">${c.preview}</div>${c.tag && !state.mine.has(c.id) ? `<span class="tag">${c.tag}</span>` : ""}</div>
+      </div>`).join("");
+    document.querySelectorAll(".conv").forEach((el) => el.addEventListener("click", () => select(Number(el.dataset.id))));
+  }
+  function select(id) {
+    state.selected = id;
+    renderList();
+    renderMain();
+  }
+  function renderMain() {
+    const c = convs.find((x) => x.id === state.selected);
+    const mine = state.mine.has(c.id);
+    $("#main").innerHTML = `
+      <div class="head">
+        <div class="who"><div class="avatar" style="background:${c.color}">${initials(c.name)}</div><div><b>${c.name}</b><small>Website chat · ${c.country}</small></div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span class="status ${mine ? "mine" : ""}">${mine ? "Assigned to you" : "Handled by AI agent"}</span>
+          ${mine ? `<button class="ghost">Resolve</button>` : `<button class="primary" id="take">Take over</button>`}
+        </div>
+      </div>
+      <div class="thread" id="thread">${c.msgs.map(([k, t]) => k === "note" ? `<div class="note">${t}</div>` : `<div class="msg ${k}">${k === "bot" ? '<div class="by">AI agent</div>' : k === "me" ? '<div class="by">You</div>' : ""}${t}</div>`).join("")}</div>
+      <form class="composer" id="composer"><input id="reply" placeholder="${mine ? "Write a reply…" : "Take over to reply"}" ${mine ? "" : "disabled"} /><button class="primary" ${mine ? "" : "disabled"}>Send</button></form>`;
+    $("#details").innerHTML = `<h3>Customer</h3>
+      <div class="kv">Plan <b>${c.plan}</b></div><div class="kv">Country <b>${c.country}</b></div><div class="kv">Orders <b>${c.orders}</b></div><div class="kv">Lifetime value <b>€${(c.orders * 86).toLocaleString()}</b></div>`;
+    $("#take")?.addEventListener("click", () => {
+      state.mine.add(c.id);
+      c.msgs.push(["note", "You took over from the AI agent"]);
+      renderList();
+      renderMain();
+      toast("You're now handling this conversation");
+      setTimeout(() => $("#reply")?.focus(), 50);
+    });
+    $("#composer").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const v = $("#reply").value.trim();
+      if (!v) return;
+      c.msgs.push(["me", v]);
+      c.preview = v;
+      renderList();
+      renderMain();
+    });
+  }
+  function toast(t) {
+    const el = $("#toast");
+    el.textContent = t;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 2600);
+  }
+  renderList();
+</script>
+</body>
+</html>

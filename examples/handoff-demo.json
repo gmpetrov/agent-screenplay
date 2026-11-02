@@ -1,0 +1,17 @@
+{
+  "$schema": "../schema/scenario.schema.json",
+  "name": "handoff-demo",
+  "url": "demo-app/index.html",
+  "viewport": { "width": 1440, "height": 900 },
+  "style": { "background": "ocean" },
+  "steps": [
+    { "title": "Human handoff, in one click", "subtitle": "Northwind Support · new in 2.4" },
+    { "click": "text=Camille Laurent", "say": "When the AI agent gets stuck, the conversation lands in your inbox." },
+    { "callout": "role=button[name='Take over']", "text": "Take over from the AI agent", "duration": 2.2 },
+    { "click": "role=button[name='Take over']", "say": "One click, and you're in charge." },
+    { "type": "Hi Camille, I'm on it: your refund is on its way.", "into": "placeholder=Write a reply…" },
+    { "click": "role=button[name='Send']" },
+    { "highlight": "text=Assigned to you", "text": "Your teammates see it's yours", "duration": 2.5 },
+    { "end": "Available today on every plan", "subtitle": "northwind.example/handoff" }
+  ]
+}
