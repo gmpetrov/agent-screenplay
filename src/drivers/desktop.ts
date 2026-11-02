@@ -460,8 +460,6 @@ async function play(
       const label = describeStep(step);
       opts.log(`${record ? "▶" : "·"} ${i + 1}/${scenario.steps.length} ${label}`);
       const ts: TakeStep = { index: i, kind, label, start: now(), end: 0, waits: [] };
-      // On a whole-screen recording, naming an app also makes it the one the next steps act in.
-      if (ds.screen && step.app) ds.app = step.app;
       const where: Where = { app: step.app, surface: step.surface };
       const minDuration = opts.minDurations?.[i] ?? 0;
       const travelTo = async (box: Box) => {
@@ -484,6 +482,15 @@ async function play(
         }
       };
       try {
+        // On a whole-screen recording, naming another app brings it to the front (an element of a
+        // background app would be acted on out of sight) and makes it the one the next steps act in.
+        if (ds.screen && step.app && step.app.toLowerCase() !== ds.app?.toLowerCase()) {
+          const w0 = now();
+          await ds.activate(step.app, opts.log);
+          await sleepIf(0.6);
+          ts.waits.push([w0, now()]);
+          lastField = undefined; // the focused field belonged to the previous app
+        }
         switch (kind) {
           case "title":
           case "end":
@@ -500,6 +507,7 @@ async function play(
             if (!ds.screen) throw new StepError(i, label, 'open needs "screen": true: a window recording films one app.');
             const w0 = now();
             await ds.activate(step.open, opts.log);
+            lastField = undefined; // the focused field belonged to the previous app
             await sleepIf(0.6); // let the window come to the front
             ts.waits.push([w0, now()]);
             break;
