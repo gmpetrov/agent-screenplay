@@ -26,15 +26,20 @@ export function voiceKey(): string | undefined {
 
 /** Synthesize each text (cached on disk by content), and return the clip files with their durations. */
 export async function synthesizeAll(texts: Map<number, string>, voice: Voice, cacheDir: string): Promise<Map<number, Clip>> {
-  const key = voiceKey();
-  if (!key) {
-    throw new VoiceError(
-      "Voice-over is enabled but CARTESIA_API_KEY is not set. Set it (https://play.cartesia.ai/keys), or remove `voice.enabled`, or pass --no-voice.",
-    );
-  }
+  // The key is only needed for sentences not generated before (they are cached by content).
+  const requireKey = (): string => {
+    const key = voiceKey();
+    if (!key) {
+      throw new VoiceError(
+        "Voice-over is enabled but CARTESIA_API_KEY is not set. Set it (https://play.cartesia.ai/keys), or remove `voice.enabled`, or pass --no-voice.",
+      );
+    }
+    return key;
+  };
   fs.mkdirSync(cacheDir, { recursive: true });
   const language = voice.language ?? "en";
-  const voiceId = voice.id ?? (await defaultVoice(language, key));
+  const base = language.split("-")[0].toLowerCase();
+  const voiceId = voice.id ?? DEFAULT_VOICES[base] ?? (await defaultVoice(language, requireKey()));
   const model = voice.model ?? DEFAULT_MODEL;
   const out = new Map<number, Clip>();
   for (const [index, text] of texts) {
@@ -45,6 +50,7 @@ export async function synthesizeAll(texts: Map<number, string>, voice: Voice, ca
       .slice(0, 16);
     const file = path.join(cacheDir, `${hash}.wav`);
     if (!fs.existsSync(file)) {
+      const key = requireKey();
       const body = {
         model_id: model,
         transcript: text,
@@ -63,7 +69,9 @@ export async function synthesizeAll(texts: Map<number, string>, voice: Voice, ca
         throw new VoiceError(`Cartesia refused the narration of step ${index + 1} (${res.status}): ${detail}`);
       }
       const buf = Buffer.from(await res.arrayBuffer());
-      fs.writeFileSync(file, buf);
+      // Write then rename, so an interrupted download never leaves a broken cached clip.
+      fs.writeFileSync(`${file}.part`, buf);
+      fs.renameSync(`${file}.part`, file);
     }
     out.set(index, { file, duration: wavDuration(fs.readFileSync(file)) });
   }
