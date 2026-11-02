@@ -15,6 +15,8 @@ export interface RenderOptions {
   audio: Map<number, { file: string; duration: number }>;
   gif?: boolean;
   log?: (msg: string) => void;
+  /** Editing progress, 0 to 1, a few times a second. */
+  onProgress?: (fraction: number) => void;
 }
 
 export interface RenderResult {
@@ -146,6 +148,7 @@ export async function renderTake(loaded: LoadedScenario, take: Take, opts: Rende
 
       const data = canvas.data();
       if (!enc.stdin.write(data)) await new Promise<void>((r) => enc.stdin.once("drain", () => r()));
+      if (opts.onProgress && (f === 0 || f % 10 === 0)) opts.onProgress(f / plan.frameCount);
       if (Date.now() - lastLog > 3000) {
         lastLog = Date.now();
         log(`Rendering ${Math.round((100 * f) / plan.frameCount)}%`);

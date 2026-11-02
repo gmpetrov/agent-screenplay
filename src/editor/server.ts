@@ -42,6 +42,7 @@ export async function startStyleEditor(file: string, opts: EditorOptions = {}): 
   const token = crypto.randomBytes(16).toString("hex");
   const page = fs.readFileSync(editorPage(), "utf8");
   let rendering: Promise<unknown> | undefined;
+  let progress = 0;
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -76,10 +77,12 @@ export async function startStyleEditor(file: string, opts: EditorOptions = {}): 
       }
       if (req.method === "POST" && url.pathname === "/api/render") {
         if (!readTakeSafe(scenarioFile)) return json(res, 409, { ok: false, error: "Record the scenario first: `screenplay record`." });
-        rendering ??= render(scenarioFile, { log }).finally(() => (rendering = undefined));
+        if (!rendering) progress = 0;
+        rendering ??= render(scenarioFile, { log, onProgress: (f) => (progress = f) }).finally(() => (rendering = undefined));
         const r = (await rendering) as { mp4: string; duration: number };
         return json(res, 200, { ok: true, mp4: r.mp4, duration: r.duration, at: Date.now() });
       }
+      if (req.method === "GET" && url.pathname === "/api/progress") return json(res, 200, { rendering: Boolean(rendering), progress });
       if (req.method === "GET" && url.pathname === "/api/video") {
         const mp4 = loadScenario(scenarioFile, { env: false }).outputs.mp4;
         if (!fs.existsSync(mp4)) return send(res, 404, "text/plain", "no video yet");

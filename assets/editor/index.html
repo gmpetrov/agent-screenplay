@@ -143,8 +143,15 @@ button:focus-visible, input:focus-visible { outline: 2px solid rgba(255,255,255,
 .btn.swapping .txt { opacity: 0; filter: blur(3px); }
 .dirty { width: 6px; height: 6px; border-radius: 50%; background: #0a0a0b; opacity: 0; transform: scale(.5); transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out); }
 .isDirty .dirty { opacity: .55; transform: none; }
-.spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 600ms linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* macOS activity indicator: eight bars, the brightest leading, turning in eight steps. */
+.mspin { position: relative; flex: none; width: 14px; height: 14px; animation: mspin 800ms steps(8) infinite; }
+.mspin i { position: absolute; left: 6.25px; top: 0; width: 1.5px; height: 4.2px; border-radius: 1px; background: currentColor; transform-origin: .75px 7px; }
+@keyframes mspin { to { transform: rotate(360deg); } }
+/* While rendering, the button fills up with the progress and is not dimmed. */
+.btn.busy:disabled { opacity: 1; cursor: progress; }
+.btn .fill { position: absolute; inset: 0; border-radius: inherit; background: rgba(255,255,255,.09); transform-origin: left; transform: scaleX(0); transition: transform 240ms linear, opacity 200ms ease; pointer-events: none; }
+.btn .txt { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+.pct { font-variant-numeric: tabular-nums; }
 kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
 
 .toast { position: fixed; left: calc((100% - 320px) / 2); top: 14px; transform: translate(-50%, -8px); opacity: 0; padding: 9px 14px; border-radius: 10px; background: var(--raised); box-shadow: 0 0 0 1px var(--line-2), 0 10px 30px rgba(0,0,0,.5); font-size: 13px; pointer-events: none; transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); max-width: 60vw; }
@@ -249,7 +256,7 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
       </div>
       <div class="dest" id="dest"></div>
       <div class="actions">
-        <button class="btn ghost" id="renderBtn"><span class="txt">Render video</span></button>
+        <button class="btn ghost" id="renderBtn"><span class="fill" id="renderFill"></span><span class="txt">Render video</span></button>
         <button class="btn primary" id="saveBtn"><span class="txt">Save</span><span class="dirty"></span></button>
       </div>
     </div>
@@ -577,11 +584,34 @@ $("renderBtn").onclick = async () => {
   if (JSON.stringify(style) !== saved && !(await save())) return;
   if (JSON.stringify(style) !== saved) return toast("Save your latest changes first", true);
   btn.disabled = true;
-  await swapText(btn, '<span class="spin"></span>Rendering…');
-  const r = await api("/api/render", { method: "POST" });
-  const j = await r.json();
+  btn.classList.add("busy");
+  const fill = $("renderFill");
+  fill.style.opacity = 1; fill.style.transform = "scaleX(0)";
+  const spinner = '<span class="mspin">' + [0, 1, 2, 3, 4, 5, 6, 7].map((n) => `<i style="transform:rotate(${n * 45}deg);opacity:${(1 - ((8 - n) % 8) * 0.11).toFixed(2)}"></i>`).join("") + "</span>";
+  await swapText(btn, `${spinner}Rendering <span class="pct" id="pct">0%</span>`);
+  // The server reports the editing progress; the button fills up with it.
+  const poll = setInterval(async () => {
+    try {
+      const p = await (await api("/api/progress")).json();
+      if (!p.rendering) return;
+      fill.style.transform = `scaleX(${p.progress})`;
+      if ($("pct")) $("pct").textContent = Math.round(p.progress * 100) + "%";
+    } catch {}
+  }, 250);
+  let r, j;
+  try {
+    r = await api("/api/render", { method: "POST" });
+    j = await r.json();
+  } finally {
+    clearInterval(poll);
+  }
+  fill.style.transform = "scaleX(1)";
+  await new Promise((res) => setTimeout(res, 250));
+  fill.style.opacity = 0;
   btn.disabled = false;
+  btn.classList.remove("busy");
   await swapText(btn, "Render video");
+  setTimeout(() => (fill.style.transform = "scaleX(0)"), 220);
   if (!r.ok) return toast(j.error || "Render failed", true);
   $("video").src = `/api/video?t=${TOKEN}&v=${j.at}`;
   $("tabVideo").disabled = false;

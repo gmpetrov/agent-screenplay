@@ -13,6 +13,8 @@ export interface RunOptions {
   noVoice?: boolean;
   gif?: boolean;
   log?: (msg: string) => void;
+  /** Editing progress, 0 to 1, a few times a second. */
+  onProgress?: (fraction: number) => void;
 }
 
 export interface RecordResult extends RenderResult {
@@ -66,7 +68,7 @@ export async function render(file: string, opts: RunOptions = {}): Promise<Rende
   const loaded = loadScenario(file);
   const take = readTake(loaded.takeDir);
   const audio = await narration(loaded, opts);
-  return renderTake(loaded, take, { audio, gif: opts.gif, log: opts.log });
+  return renderTake(loaded, take, { audio, gif: opts.gif, log: opts.log, onProgress: opts.onProgress });
 }
 
 export async function check(file: string, opts: RunOptions = {}): Promise<CheckReport> {
