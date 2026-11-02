@@ -50,7 +50,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid rgba(255,255,255,
 /* Sidebar */
 .side { background: var(--panel); border-left: 1px solid var(--line); display: grid; grid-template-rows: 1fr auto; min-height: 0; }
 .scroll { overflow-y: auto; padding: 20px 20px 8px; }
-.section { padding: 4px 0 20px; animation: rise 420ms var(--ease-out) both; }
+.section { padding: 18px 0 20px; border-top: 1px solid var(--line); animation: rise 420ms var(--ease-out) both; }
+.head + .section { border-top: 0; padding-top: 4px; }
+.head { display: flex; align-items: center; justify-content: space-between; margin: -4px 0 12px; font-size: 13px; font-weight: 600; }
+.reset { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); transition: color 160ms ease, background 160ms ease, opacity 160ms ease, transform 160ms var(--ease-out); }
+.reset:hover:not(:disabled) { color: var(--text); background: var(--raised); }
+.reset:active:not(:disabled) { transform: scale(.96); }
+.reset:disabled { opacity: .35; cursor: default; }
+.reset.spun svg { animation: unwind 420ms var(--ease-out); }
+@keyframes unwind { from { transform: rotate(0); } to { transform: rotate(-360deg); } }
+.custom { margin-top: 12px; padding: 12px; border-radius: var(--r); background: var(--bg); border: 1px solid var(--line); }
+.custom .stops { margin-top: 0; }
+.custom .stop { background: var(--panel); }
 .section:nth-child(2) { animation-delay: 50ms; } .section:nth-child(3) { animation-delay: 100ms; }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
 .label { font-size: 12px; font-weight: 500; color: var(--muted); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; }
@@ -168,6 +179,13 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
 
   <aside class="side">
     <div class="scroll">
+      <div class="head">
+        <span>Style</span>
+        <button class="reset" id="reset" title="Back to Screenplay's defaults">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7a4.5 4.5 0 1 0 1.3-3.2"/><path d="M2.5 1.8v2.4h2.4"/></svg>
+          Reset
+        </button>
+      </div>
       <div class="section">
         <p class="label">Background</p>
         <div class="seg" id="bgKind"><span class="pill"></span>
@@ -175,6 +193,7 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
         </div>
         <div class="pane" data-pane="gradient">
           <div class="swatches" id="presets"></div>
+          <div class="custom">
           <div class="stops">
             <label class="stop"><i id="s1i"></i><span id="s1t"></span><input type="color" id="s1"></label>
             <button class="swap" id="swap" title="Swap colors" aria-label="Swap colors">
@@ -182,9 +201,10 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
             </button>
             <label class="stop"><i id="s2i"></i><span id="s2t"></span><input type="color" id="s2"></label>
           </div>
-          <div style="margin-top:16px">
-            <p class="label"><span>Direction</span><span style="display:flex;gap:8px;align-items:center"><span class="dial" id="dial"></span><output id="angleV"></output></span></p>
+          <div style="margin-top:14px">
+            <p class="label"><span>Gradient angle</span><span style="display:flex;gap:8px;align-items:center"><span class="dial" id="dial"></span><output id="angleV"></output></span></p>
             <div class="range"><input type="range" id="angle" min="0" max="360" step="5"></div>
+          </div>
           </div>
         </div>
         <div class="pane" data-pane="color">
@@ -389,6 +409,14 @@ $("hex").onchange = (e) => { const v = e.target.value.trim(); if (/^#([0-9a-f]{3
 $("pad").oninput = (e) => { live(); style.padding = +e.target.value; change(); };
 $("rad").oninput = (e) => { live(); style.radius = +e.target.value; change(); };
 $("shadow").onclick = () => { style.shadow = !style.shadow; change(); };
+$("reset").onclick = () => {
+  style = { ...S.defaults };
+  setKind(kindOf(style.background), true);
+  change();
+  const b = $("reset"); b.classList.remove("spun"); void b.offsetWidth; b.classList.add("spun");
+  setTimeout(() => b.classList.remove("spun"), 400);
+  toast("Back to the defaults · Save to keep them");
+};
 $("bgKind").querySelectorAll("button").forEach((b) => (b.onclick = () => setKind(b.dataset.k)));
 $("target").querySelectorAll("button").forEach((b) => (b.onclick = () => { target = b.dataset.k; setSeg($("target"), target); sync(); }));
 
@@ -452,6 +480,7 @@ function sync() {
     $(id + "V").textContent = v + unit;
   }
   $("shadow").setAttribute("aria-checked", String(style.shadow));
+  $("reset").disabled = JSON.stringify(style) === JSON.stringify({ ...S.defaults });
   // The recording keeps its shape: when it is not the video's, the background shows on two sides even with no padding.
   const cap = S.capture || { width: 1440, height: 900 }, r = cap.width / cap.height, R = S.output.width / S.output.height;
   const off = Math.abs(r - R) > 0.01;
