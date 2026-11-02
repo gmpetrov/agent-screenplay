@@ -31,6 +31,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid rgba(255,255,255,
 .frame { position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 30px 80px rgba(0,0,0,.5); }
 .comp { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; }
 .bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: opacity 320ms var(--ease-out); }
+.grain { position: absolute; inset: 0; opacity: 0; background-size: 128px 128px; transition: opacity 320ms var(--ease-out); pointer-events: none; }
 .glow { position: absolute; inset: 0; background: radial-gradient(circle 1536px at 20% 10%, rgba(255,255,255,.18), rgba(255,255,255,0)); transition: opacity 320ms var(--ease-out); }
 .win { position: absolute; overflow: hidden; background: #fff;
   transition: left 280ms var(--ease-out), top 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out), border-radius 280ms var(--ease-out), box-shadow 280ms var(--ease-out); }
@@ -45,12 +46,27 @@ button:focus-visible, input:focus-visible { outline: 2px solid rgba(255,255,255,
 .video { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; opacity: 0; transform: scale(.985); pointer-events: none; transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out); }
 .showVideo .video { opacity: 1; transform: none; pointer-events: auto; }
 
-.under { display: flex; justify-content: center; gap: 12px; align-items: center; padding: 0 24px 20px; font-size: 12px; color: var(--muted); min-height: 52px; }
+.under { display: flex; justify-content: center; padding: 0 24px 20px; }
+/* The caption describes the preview: right under the frame, and only on the Preview tab. */
+.frameWrap { position: relative; }
+.hint { position: absolute; left: 0; right: 0; top: calc(100% + 12px); text-align: center; font-size: 12px; color: var(--muted); transition: opacity 180ms ease, transform 180ms var(--ease-out); }
+.videoMode .hint { opacity: 0; transform: translateY(-2px); }
 
 /* Sidebar */
 .side { background: var(--panel); border-left: 1px solid var(--line); display: grid; grid-template-rows: 1fr auto; min-height: 0; }
 .scroll { overflow-y: auto; padding: 20px 20px 8px; }
-.section { padding: 4px 0 20px; animation: rise 420ms var(--ease-out) both; }
+.section { padding: 18px 0 20px; border-top: 1px solid var(--line); animation: rise 420ms var(--ease-out) both; }
+.head + .section { border-top: 0; padding-top: 4px; }
+.head { display: flex; align-items: center; justify-content: space-between; margin: -4px 0 12px; font-size: 13px; font-weight: 600; }
+.reset { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); transition: color 160ms ease, background 160ms ease, opacity 160ms ease, transform 160ms var(--ease-out); }
+.reset:hover:not(:disabled) { color: var(--text); background: var(--raised); }
+.reset:active:not(:disabled) { transform: scale(.96); }
+.reset:disabled { opacity: .35; cursor: default; }
+.reset.spun svg { animation: unwind 420ms var(--ease-out); }
+@keyframes unwind { from { transform: rotate(0); } to { transform: rotate(-360deg); } }
+.custom { margin-top: 12px; padding: 12px; border-radius: var(--r); background: var(--bg); border: 1px solid var(--line); }
+.custom .stops { margin-top: 0; }
+.custom .stop { background: var(--panel); }
 .section:nth-child(2) { animation-delay: 50ms; } .section:nth-child(3) { animation-delay: 100ms; }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
 .label { font-size: 12px; font-weight: 500; color: var(--muted); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; }
@@ -103,6 +119,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid rgba(255,255,255,
 .range input::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.5); transition: transform 140ms var(--ease-out); }
 .range input:active::-webkit-slider-thumb { transform: scale(1.15); }
 .range input::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #fff; }
+.note { margin: 8px 0 0; font-size: 12px; line-height: 1.45; color: var(--faint); display: none; }
+.note.on { display: block; animation: paneIn 200ms var(--ease-out); }
 .row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
 .dial { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line-2); position: relative; }
 .dial::after { content: ""; position: absolute; left: 50%; top: 2px; width: 1.5px; height: 7px; margin-left: -.75px; border-radius: 1px; background: #fff; transform-origin: 50% 6px; transform: rotate(var(--a)); }
@@ -125,8 +143,15 @@ button:focus-visible, input:focus-visible { outline: 2px solid rgba(255,255,255,
 .btn.swapping .txt { opacity: 0; filter: blur(3px); }
 .dirty { width: 6px; height: 6px; border-radius: 50%; background: #0a0a0b; opacity: 0; transform: scale(.5); transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out); }
 .isDirty .dirty { opacity: .55; transform: none; }
-.spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 600ms linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* macOS activity indicator: eight bars, the brightest leading, turning in eight steps. */
+.mspin { position: relative; flex: none; width: 14px; height: 14px; animation: mspin 800ms steps(8) infinite; }
+.mspin i { position: absolute; left: 6.25px; top: 0; width: 1.5px; height: 4.2px; border-radius: 1px; background: currentColor; transform-origin: .75px 7px; }
+@keyframes mspin { to { transform: rotate(360deg); } }
+/* While rendering, the button fills up with the progress and is not dimmed. */
+.btn.busy:disabled { opacity: 1; cursor: progress; }
+.btn .fill { position: absolute; inset: 0; border-radius: inherit; background: rgba(255,255,255,.09); transform-origin: left; transform: scaleX(0); transition: transform 240ms linear, opacity 200ms ease; pointer-events: none; }
+.btn .txt { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+.pct { font-variant-numeric: tabular-nums; }
 kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
 
 .toast { position: fixed; left: calc((100% - 320px) / 2); top: 14px; transform: translate(-50%, -8px); opacity: 0; padding: 9px 14px; border-radius: 10px; background: var(--raised); box-shadow: 0 0 0 1px var(--line-2), 0 10px 30px rgba(0,0,0,.5); font-size: 13px; pointer-events: none; transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); max-width: 60vw; }
@@ -149,23 +174,33 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
   <div class="main">
     <div class="top"><b>Screenplay</b><span class="sep">/</span><span id="name"></span></div>
     <div class="stage"><div class="fit" id="fit">
+      <div class="frameWrap">
       <div class="frame" id="frame">
         <div class="comp" id="comp">
           <div class="bg" id="bgA"></div><div class="bg" id="bgB" style="opacity:0"></div>
           <div class="glow" id="glow"></div>
+          <div class="grain" id="grain"></div>
           <div class="win" id="win"></div>
         </div>
         <video class="video" id="video" controls playsinline></video>
       </div>
+      <span class="hint" id="hint"></span>
+      </div>
     </div></div>
     <div class="under">
       <div class="tabs"><button id="tabPreview" aria-pressed="true">Preview</button><button id="tabVideo" disabled>Video</button></div>
-      <span id="hint"></span>
     </div>
   </div>
 
   <aside class="side">
     <div class="scroll">
+      <div class="head">
+        <span>Style</span>
+        <button class="reset" id="reset" title="Back to Screenplay's defaults">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7a4.5 4.5 0 1 0 1.3-3.2"/><path d="M2.5 1.8v2.4h2.4"/></svg>
+          Reset
+        </button>
+      </div>
       <div class="section">
         <p class="label">Background</p>
         <div class="seg" id="bgKind"><span class="pill"></span>
@@ -173,6 +208,7 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
         </div>
         <div class="pane" data-pane="gradient">
           <div class="swatches" id="presets"></div>
+          <div class="custom">
           <div class="stops">
             <label class="stop"><i id="s1i"></i><span id="s1t"></span><input type="color" id="s1"></label>
             <button class="swap" id="swap" title="Swap colors" aria-label="Swap colors">
@@ -180,9 +216,10 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
             </button>
             <label class="stop"><i id="s2i"></i><span id="s2t"></span><input type="color" id="s2"></label>
           </div>
-          <div style="margin-top:16px">
-            <p class="label"><span>Direction</span><span style="display:flex;gap:8px;align-items:center"><span class="dial" id="dial"></span><output id="angleV"></output></span></p>
+          <div style="margin-top:14px">
+            <p class="label"><span>Gradient angle</span><span style="display:flex;gap:8px;align-items:center"><span class="dial" id="dial"></span><output id="angleV"></output></span></p>
             <div class="range"><input type="range" id="angle" min="0" max="360" step="5"></div>
+          </div>
           </div>
         </div>
         <div class="pane" data-pane="color">
@@ -200,8 +237,9 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
       </div>
 
       <div class="section">
-        <p class="label"><span>Margin</span><output id="padV"></output></p>
+        <p class="label"><span>Padding</span><output id="padV"></output></p>
         <div class="range"><input type="range" id="pad" min="0" max="240" step="2"></div>
+        <p class="note" id="shapeNote"></p>
         <p class="label" style="margin-top:18px"><span>Corners</span><output id="radV"></output></p>
         <div class="range"><input type="range" id="rad" min="0" max="48" step="1"></div>
       </div>
@@ -218,7 +256,7 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
       </div>
       <div class="dest" id="dest"></div>
       <div class="actions">
-        <button class="btn ghost" id="renderBtn"><span class="txt">Render video</span></button>
+        <button class="btn ghost" id="renderBtn"><span class="fill" id="renderFill"></span><span class="txt">Render video</span></button>
         <button class="btn primary" id="saveBtn"><span class="txt">Save</span><span class="dirty"></span></button>
       </div>
     </div>
@@ -274,16 +312,40 @@ function layout() {
 
 function fitStage() {
   const L = layout(), box = $("fit").getBoundingClientRect();
-  const sc = Math.min(box.width / L.OW, box.height / L.OH);
+  const sc = Math.min(box.width / L.OW, (box.height - 32) / L.OH); // room for the caption under the frame
   $("frame").style.width = L.OW * sc + "px"; $("frame").style.height = L.OH * sc + "px";
   $("comp").style.width = L.OW + "px"; $("comp").style.height = L.OH + "px";
   $("comp").style.transform = `scale(${sc})`;
 }
 
+/* Same drawing as the renderer (src/render/presets.ts, paintMesh): color fields over a base. */
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${Math.max(0, Math.min(1, a)).toFixed(3)})`; };
+function meshCss(p, w, h) {
+  const side = Math.max(w, h);
+  const layers = p.blobs.map((b) => `radial-gradient(circle ${b.r * side}px at ${b.x * w}px ${b.y * h}px, ${rgba(b.color, b.alpha)} 0%, ${rgba(b.color, b.alpha * 0.6)} 40%, ${rgba(b.color, 0)} 100%)`);
+  return [...layers.reverse(), p.base].join(", ");
+}
+function presetCss(p, w, h) {
+  return p.kind === "mesh" ? meshCss(p, w, h) : `linear-gradient(${p.angle}deg, ${p.stops.join(", ")})`;
+}
+/* The grain tile: the renderer's seeded noise (mulberry32, seed 7), 128×128. */
+const grainUrl = (() => {
+  const N = 128, c = document.createElement("canvas"); c.width = c.height = N;
+  const ctx = c.getContext("2d"), img = ctx.createImageData(N, N);
+  let a = 7;
+  for (let i = 0; i < N * N; i++) {
+    a = (a + 0x6d2b79f5) >>> 0; let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    const v = ((t ^ (t >>> 14)) >>> 0) % 256;
+    img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v; img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return c.toDataURL();
+})();
 function bgCss(bg) {
   if (typeof bg === "object") return `linear-gradient(${bg.angle ?? 135}deg, ${bg.gradient.join(", ")})`;
   const p = S.presets[bg];
-  if (p) return `linear-gradient(${p.angle}deg, ${p.stops.join(", ")})`;
+  if (p) return presetCss(p, S.output.width, S.output.height);
   if (/^#/.test(bg)) return bg;
   if (imageRef) return `url("/api/image?t=${TOKEN}&from=${imageRef.from}&path=${encodeURIComponent(imageRef.path)}")`;
   return "#111";
@@ -300,7 +362,14 @@ function draw(initial) {
     if (initial) { $(back).style.transition = "none"; requestAnimationFrame(() => $(back).style.transition = ""); }
     $(back).style.opacity = 1; $(front).style.opacity = 0; front = back; lastBg = css;
   }
-  $("glow").style.opacity = kindOf(style.background) === "gradient" ? 1 : 0;
+  const preset = typeof style.background === "string" ? S.presets[style.background] : null;
+  // The light from the top left belongs to linear gradients; mesh presets have their grain.
+  $("glow").style.opacity = kindOf(style.background) === "gradient" && !(preset && preset.kind === "mesh") ? 1 : 0;
+  $("grain").style.backgroundImage = `url(${grainUrl})`;
+  // Same tile size as the renderer: 128 px, doubled at 4K.
+  const tile = 128 * Math.max(1, Math.round(S.output.height / 1080));
+  $("grain").style.backgroundSize = `${tile}px ${tile}px`;
+  $("grain").style.opacity = preset && preset.kind === "mesh" ? preset.grain : 0;
   Object.assign(win.style, { left: L.x + "px", top: L.y + "px", width: L.w + "px", height: L.h + "px", borderRadius: style.radius * L.k + "px",
     boxShadow: style.shadow ? `0 ${24 * L.k}px ${60 * L.k}px rgba(0,0,0,.35), 0 ${2 * L.k}px ${8 * L.k}px rgba(0,0,0,.18)` : "none" });
   if (!win.dataset.built) {
@@ -332,7 +401,7 @@ function setKind(k, initial) {
   if (initial) return;
   const cur = style.background, curKind = kindOf(cur);
   if (k === curKind) return;
-  if (k === "gradient") style.background = lastGradient || "ocean";
+  if (k === "gradient") style.background = lastGradient || S.defaults.background;
   if (k === "color") style.background = lastColor || "#0f172a";
   if (k === "image") { if (imageRef) style.background = imageRef.path; else { sync(); return; } }
   change();
@@ -341,10 +410,12 @@ let lastGradient = null, lastColor = null;
 
 function buildSwatches() {
   const pre = $("presets");
-  for (const [name, p] of Object.entries(S.presets)) {
+  for (const name of S.offered) {
+    const p = S.presets[name];
     const b = document.createElement("button");
     b.className = "sw"; b.dataset.v = name; b.title = name; b.setAttribute("aria-label", name);
-    b.style.background = `linear-gradient(${p.angle}deg, ${p.stops.join(", ")})`;
+    // A swatch is the same mesh, drawn on a square.
+    b.style.background = presetCss(p, 60, 60);
     b.onclick = () => { style.background = name; change(); };
     pre.appendChild(b);
   }
@@ -364,8 +435,8 @@ function buildSwatches() {
 function currentStops() {
   const bg = style.background;
   if (typeof bg === "object") return { stops: bg.gradient, angle: bg.angle ?? 135 };
-  const p = S.presets[bg] || S.presets.ocean;
-  return { stops: [p.stops[0], p.stops[p.stops.length - 1]], angle: p.angle };
+  const p = S.presets[bg] || S.presets[S.defaults.background];
+  return { stops: p.colors, angle: p.kind === "linear" ? p.angle : 135 };
 }
 function customGradient() {
   if (typeof style.background === "object") return style.background;
@@ -386,6 +457,14 @@ $("hex").onchange = (e) => { const v = e.target.value.trim(); if (/^#([0-9a-f]{3
 $("pad").oninput = (e) => { live(); style.padding = +e.target.value; change(); };
 $("rad").oninput = (e) => { live(); style.radius = +e.target.value; change(); };
 $("shadow").onclick = () => { style.shadow = !style.shadow; change(); };
+$("reset").onclick = () => {
+  style = { ...S.defaults };
+  setKind(kindOf(style.background), true);
+  change();
+  const b = $("reset"); b.classList.remove("spun"); void b.offsetWidth; b.classList.add("spun");
+  setTimeout(() => b.classList.remove("spun"), 400);
+  toast("Back to the defaults · Save to keep them");
+};
 $("bgKind").querySelectorAll("button").forEach((b) => (b.onclick = () => setKind(b.dataset.k)));
 $("target").querySelectorAll("button").forEach((b) => (b.onclick = () => { target = b.dataset.k; setSeg($("target"), target); sync(); }));
 
@@ -449,6 +528,15 @@ function sync() {
     $(id + "V").textContent = v + unit;
   }
   $("shadow").setAttribute("aria-checked", String(style.shadow));
+  $("reset").disabled = JSON.stringify(style) === JSON.stringify({ ...S.defaults });
+  // The recording keeps its shape: when it is not the video's, the background shows on two sides even with no padding.
+  const cap = S.capture || { width: 1440, height: 900 }, r = cap.width / cap.height, R = S.output.width / S.output.height;
+  const off = Math.abs(r - R) > 0.01;
+  $("shapeNote").classList.toggle("on", off && style.padding < 24);
+  const shape = Math.abs(R - 16 / 9) < 0.01 ? "16:9" : `${S.output.width}×${S.output.height}`;
+  const fit = S.defaultViewport;
+  $("shapeNote").textContent = !off ? "" : `The ${S.url ? "recording" : "window"} is ${cap.width}×${cap.height}, not ${shape} like the video, so the background shows on the ${r < R ? "sides" : "top and bottom"}.` +
+    (S.url ? ` Record with a ${shape} viewport (such as ${fit.width}×${fit.height}, the default) to fill the frame.` : "");
   const file = target === "project" ? S.configFile : S.scenarioFile;
   $("dest").textContent = (target === "project" ? (S.configExists ? "Saves to " : "Creates ") : "Saves to ") + file.split(/[\\/]/).pop();
   $("dest").title = file;
@@ -496,11 +584,34 @@ $("renderBtn").onclick = async () => {
   if (JSON.stringify(style) !== saved && !(await save())) return;
   if (JSON.stringify(style) !== saved) return toast("Save your latest changes first", true);
   btn.disabled = true;
-  await swapText(btn, '<span class="spin"></span>Rendering…');
-  const r = await api("/api/render", { method: "POST" });
-  const j = await r.json();
+  btn.classList.add("busy");
+  const fill = $("renderFill");
+  fill.style.opacity = 1; fill.style.transform = "scaleX(0)";
+  const spinner = '<span class="mspin">' + [0, 1, 2, 3, 4, 5, 6, 7].map((n) => `<i style="transform:rotate(${n * 45}deg);opacity:${(1 - ((8 - n) % 8) * 0.11).toFixed(2)}"></i>`).join("") + "</span>";
+  await swapText(btn, `${spinner}Rendering <span class="pct" id="pct">0%</span>`);
+  // The server reports the editing progress; the button fills up with it.
+  const poll = setInterval(async () => {
+    try {
+      const p = await (await api("/api/progress")).json();
+      if (!p.rendering) return;
+      fill.style.transform = `scaleX(${p.progress})`;
+      if ($("pct")) $("pct").textContent = Math.round(p.progress * 100) + "%";
+    } catch {}
+  }, 250);
+  let r, j;
+  try {
+    r = await api("/api/render", { method: "POST" });
+    j = await r.json();
+  } finally {
+    clearInterval(poll);
+  }
+  fill.style.transform = "scaleX(1)";
+  await new Promise((res) => setTimeout(res, 250));
+  fill.style.opacity = 0;
   btn.disabled = false;
+  btn.classList.remove("busy");
   await swapText(btn, "Render video");
+  setTimeout(() => (fill.style.transform = "scaleX(0)"), 220);
   if (!r.ok) return toast(j.error || "Render failed", true);
   $("video").src = `/api/video?t=${TOKEN}&v=${j.at}`;
   $("tabVideo").disabled = false;
@@ -511,6 +622,7 @@ $("renderBtn").onclick = async () => {
 
 function showVideo(on) {
   $("frame").classList.toggle("showVideo", on);
+  document.body.classList.toggle("videoMode", on);
   $("tabPreview").setAttribute("aria-pressed", String(!on));
   $("tabVideo").setAttribute("aria-pressed", String(on));
   if (!on) $("video").pause();
@@ -518,8 +630,10 @@ function showVideo(on) {
 }
 $("tabPreview").onclick = () => showVideo(false);
 $("tabVideo").onclick = () => showVideo(true);
-document.addEventListener("input", () => showVideo(false), true);
-document.addEventListener("click", (e) => { if (e.target.closest(".side") && !e.target.closest(".foot")) showVideo(false); }, true);
+// Changing a setting shows the preview again; using the video's own controls (seek, volume) does not.
+const editsStyle = (e) => e.target instanceof Element && e.target.closest(".side") && !e.target.closest(".foot");
+document.addEventListener("input", (e) => { if (editsStyle(e)) showVideo(false); }, true);
+document.addEventListener("click", (e) => { if (editsStyle(e)) showVideo(false); }, true);
 
 let toastT;
 function toast(msg, err) {

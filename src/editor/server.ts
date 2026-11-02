@@ -11,11 +11,12 @@ import { loadScenario } from "../scenario/load.js";
 import { BACKGROUNDS, Style, type Style as StyleT } from "../scenario/schema.js";
 import { readTake, type Take } from "../take.js";
 import { openSource } from "../render/sources.js";
-import { PRESETS } from "../render/style.js";
+import { ALL_PRESETS, DEFAULT_BACKGROUND, MESH_PRESETS, presetColors } from "../render/presets.js";
+import { defaultViewport } from "../drivers/web.js";
 
 /**
  * `screenplay style`: a local page to set the look of the videos (background,
- * margin, corners, shadow) on a real frame of the recording, then save it to the
+ * padding, corners, shadow) on a real frame of the recording, then save it to the
  * scenario or to the whole project, and render.
  */
 
@@ -41,6 +42,7 @@ export async function startStyleEditor(file: string, opts: EditorOptions = {}): 
   const token = crypto.randomBytes(16).toString("hex");
   const page = fs.readFileSync(editorPage(), "utf8");
   let rendering: Promise<unknown> | undefined;
+  let progress = 0;
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -75,10 +77,12 @@ export async function startStyleEditor(file: string, opts: EditorOptions = {}): 
       }
       if (req.method === "POST" && url.pathname === "/api/render") {
         if (!readTakeSafe(scenarioFile)) return json(res, 409, { ok: false, error: "Record the scenario first: `screenplay record`." });
-        rendering ??= render(scenarioFile, { log }).finally(() => (rendering = undefined));
+        if (!rendering) progress = 0;
+        rendering ??= render(scenarioFile, { log, onProgress: (f) => (progress = f) }).finally(() => (rendering = undefined));
         const r = (await rendering) as { mp4: string; duration: number };
         return json(res, 200, { ok: true, mp4: r.mp4, duration: r.duration, at: Date.now() });
       }
+      if (req.method === "GET" && url.pathname === "/api/progress") return json(res, 200, { rendering: Boolean(rendering), progress });
       if (req.method === "GET" && url.pathname === "/api/video") {
         const mp4 = loadScenario(scenarioFile, { env: false }).outputs.mp4;
         if (!fs.existsSync(mp4)) return send(res, 404, "text/plain", "no video yet");
@@ -124,11 +128,14 @@ export function state(scenarioFile: string) {
     frame: loaded.scenario.style?.frame ?? "none",
     url: loaded.scenario.url ?? null,
     output: { width: raw.output?.width ?? 1920, height: raw.output?.height ?? 1080 },
-    capture: take ? { width: take.width, height: take.height } : loaded.scenario.url ? (loaded.scenario.viewport ?? { width: 1440, height: 900 }) : null,
+    defaultViewport: defaultViewport(loaded.scenario.output),
+    capture: take ? { width: take.width, height: take.height } : loaded.scenario.url ? (loaded.scenario.viewport ?? defaultViewport(loaded.scenario.output)) : null,
     hasTake: Boolean(take),
     hasVideo: fs.existsSync(loaded.outputs.mp4),
-    presets: Object.fromEntries(BACKGROUNDS.map((b) => [b, PRESETS[b]])),
-    defaults: { background: "ocean", padding: 72, radius: 14, shadow: true },
+    /** Every preset the page may have to draw, and the ones it offers. */
+    presets: Object.fromEntries(Object.entries(ALL_PRESETS).map(([k, p]) => [k, { ...p, colors: presetColors(p) }])),
+    offered: Object.keys(MESH_PRESETS),
+    defaults: { background: DEFAULT_BACKGROUND, padding: 72, radius: 14, shadow: true },
   };
 }
 
