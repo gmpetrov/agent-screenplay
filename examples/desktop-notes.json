@@ -1,0 +1,14 @@
+{
+  "$schema": "../schema/scenario.schema.json",
+  "name": "desktop-notes",
+  "app": "python3.12",
+  "style": { "background": "lavender" },
+  "steps": [
+    { "title": "Notes, on your desktop" },
+    { "click": "role=button[name='New note']", "say": "Start a new note." },
+    { "type": "Book the team lunch for Friday", "into": "role=textfield" },
+    { "click": "role=button[name='Save']" },
+    { "highlight": "text=Note saved", "text": "Saved instantly", "duration": 2 },
+    { "end": "That's it." }
+  ]
+}
