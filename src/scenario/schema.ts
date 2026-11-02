@@ -158,12 +158,24 @@ export type Step = z.infer<typeof Step>;
 
 export const BACKGROUNDS = ["sunset", "ocean", "lavender", "forest", "midnight", "mono", "paper"] as const;
 
+const Color = z.string().regex(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i, "a hex color like #0ea5e9");
+
+export const Gradient = z
+  .object({
+    gradient: z.array(Color).min(2).max(4).describe("2 to 4 hex colors, from the start of the gradient to its end."),
+    angle: z.number().min(0).max(360).optional().describe("Direction in degrees, as in CSS: 90 goes left to right, 180 top to bottom (default 135)."),
+  })
+  .strict();
+export type Gradient = z.infer<typeof Gradient>;
+
 export const Style = z
   .object({
     background: z
-      .string()
+      .union([z.string(), Gradient])
       .optional()
-      .describe(`A preset (${BACKGROUNDS.join(", ")}), a CSS color like #0f172a, or an image path.`),
+      .describe(
+        `A preset (${BACKGROUNDS.join(", ")}), a color like #0f172a, an image path (relative to the file that sets it), or a gradient { "gradient": ["#0ea5e9", "#6366f1"], "angle": 135 }.`,
+      ),
     padding: z.number().min(0).max(400).optional().describe("Space around the recording, in output pixels (default 72)."),
     radius: z.number().min(0).max(80).optional().describe("Corner radius of the recording (default 14)."),
     shadow: z.boolean().optional().describe("Drop shadow under the recording (default true)."),

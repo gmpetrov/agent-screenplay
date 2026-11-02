@@ -4,10 +4,15 @@ import { parseScenario } from "../src/scenario/load.js";
 
 // Plays a whole-screen scenario against a fake agent-desktop and returns the commands it received.
 // (From Cody's review of PR #2.)
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
 async function replay(steps: unknown[]) {
   const calls: string[][] = [];
+  // agent-desktop is faked: no screen is needed, but Linux checks that a display is set.
+  vi.stubEnv("DISPLAY", ":99");
   vi.spyOn(AgentDesktop, "locate").mockReturnValue("/unused");
   vi.spyOn(AgentDesktop.prototype, "call").mockImplementation(async (args: string[]) => {
     calls.push(args);

@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { Scenario } from "./schema.js";
+import { BACKGROUNDS, Scenario } from "./schema.js";
+import { absolutizeStyle, findProjectConfig, mergeStyles, readProjectConfig } from "./config.js";
 
 export interface LoadedScenario {
   scenario: Scenario;
@@ -16,6 +17,8 @@ export interface LoadedScenario {
   /** Directory of the latest take of this scenario. */
   takeDir: string;
   outputs: { mp4: string; gif: string; storyboard: string };
+  /** The project's screenplay.config.json, when one applies (its style is merged into `scenario.style`). */
+  projectConfig?: string;
 }
 
 export class ScenarioError extends Error {}
@@ -56,8 +59,10 @@ export function parseScenario(raw: unknown): Scenario {
 }
 
 export function loadScenario(file: string, opts: { env?: boolean } = {}): LoadedScenario {
-  const abs = path.resolve(file);
-  if (!fs.existsSync(abs)) throw new ScenarioError(`Scenario not found: ${abs}`);
+  const given = path.resolve(file);
+  if (!fs.existsSync(given)) throw new ScenarioError(`Scenario not found: ${given}`);
+  // The real path, so the same scenario reached through a symlink (macOS /tmp is /private/tmp) is the same scenario.
+  const abs = fs.realpathSync(given);
   let raw: unknown;
   try {
     raw = JSON.parse(fs.readFileSync(abs, "utf8"));
@@ -70,6 +75,17 @@ export function loadScenario(file: string, opts: { env?: boolean } = {}): Loaded
   // A url without a scheme is a local file, relative to the scenario.
   if (scenario.url && !/^[a-z][a-z0-9+.-]*:/i.test(scenario.url)) {
     scenario = { ...scenario, url: pathToFileURL(path.resolve(dir, scenario.url)).toString() };
+  }
+  const projectConfig = findProjectConfig(dir);
+  if (projectConfig) {
+    let config;
+    try {
+      config = readProjectConfig(projectConfig);
+    } catch (e) {
+      throw new ScenarioError((e as Error).message);
+    }
+    const projectStyle = absolutizeStyle(config.style, path.dirname(projectConfig), BACKGROUNDS);
+    scenario = { ...scenario, style: mergeStyles(projectStyle, scenario.style) };
   }
   const base = path.basename(abs).replace(/\.json$/i, "").replace(/\.screenplay$/i, "");
   const name = scenario.name ?? base;
@@ -85,6 +101,7 @@ export function loadScenario(file: string, opts: { env?: boolean } = {}): Loaded
     workDir,
     takeDir: path.join(workDir, "takes", slug),
     outputs: { mp4, gif: `${stem}.gif`, storyboard: `${stem}.storyboard.png` },
+    projectConfig,
   };
 }
 

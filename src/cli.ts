@@ -61,6 +61,22 @@ program
   });
 
 program
+  .command("style")
+  .argument("<scenario>", "scenario JSON file")
+  .description("Open the style editor in your browser: background, margin, corners and shadow, on a frame of the recording.")
+  .option("--port <port>", "port to listen on (default: any free port)")
+  .option("--no-open", "print the link instead of opening the browser")
+  .action(async (file: string, o: { port?: string; open: boolean }) => {
+    try {
+      const { startStyleEditor } = await import("./editor/server.js");
+      await startStyleEditor(file, { port: o.port ? Number(o.port) : undefined, open: o.open, log });
+      log("Press Ctrl+C to stop.");
+    } catch (e) {
+      fail(e);
+    }
+  });
+
+program
   .command("check")
   .argument("<scenario>", "scenario JSON file")
   .description("Play the scenario quickly without filming: every element exists and the flow completes.")
