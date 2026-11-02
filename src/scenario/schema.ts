@@ -236,7 +236,7 @@ export const Scenario = z
     viewport: z
       .object({ width: z.number().int().min(320).max(3840), height: z.number().int().min(240).max(2160) })
       .optional()
-      .describe("Web: browser size in CSS pixels (default 1440 wide with the video's shape: 1440x810 for 16:9, so the page fills the frame when padding is 0)."),
+      .describe("Web: browser size in CSS pixels (default: the video's shape with a longer side of 1440, such as 1440x810 for 16:9, so the page fills the frame when padding is 0)."),
     scale: z.number().min(1).max(3).optional().describe("Web: device pixel ratio of the capture (default 2, Retina)."),
     colorScheme: z.enum(["light", "dark"]).optional(),
     locale: z.string().optional().describe("Web: browser locale, e.g. fr-FR."),

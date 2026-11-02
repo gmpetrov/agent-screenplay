@@ -124,6 +124,8 @@ describe("default viewport", () => {
     expect(defaultViewport()).toEqual({ width: 1440, height: 810 });
     expect(defaultViewport({ width: 1080, height: 1080 })).toEqual({ width: 1440, height: 1440 });
     expect(defaultViewport({ width: 1920, height: 1200 })).toEqual({ width: 1440, height: 900 });
+    // Vertical videos: the longer side stays 1440, within the viewport limit.
+    expect(defaultViewport({ width: 1080, height: 1920 })).toEqual({ width: 810, height: 1440 });
   });
 });
 

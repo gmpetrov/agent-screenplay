@@ -26,7 +26,7 @@
       "type": "boolean"
     },
     "viewport": {
-      "description": "Web: browser size in CSS pixels (default 1440 wide with the video's shape: 1440x810 for 16:9, so the page fills the frame when padding is 0).",
+      "description": "Web: browser size in CSS pixels (default: the video's shape with a longer side of 1440, such as 1440x810 for 16:9, so the page fills the frame when padding is 0).",
       "type": "object",
       "properties": {
         "width": {

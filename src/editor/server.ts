@@ -125,6 +125,7 @@ export function state(scenarioFile: string) {
     frame: loaded.scenario.style?.frame ?? "none",
     url: loaded.scenario.url ?? null,
     output: { width: raw.output?.width ?? 1920, height: raw.output?.height ?? 1080 },
+    defaultViewport: defaultViewport(loaded.scenario.output),
     capture: take ? { width: take.width, height: take.height } : loaded.scenario.url ? (loaded.scenario.viewport ?? defaultViewport(loaded.scenario.output)) : null,
     hasTake: Boolean(take),
     hasVideo: fs.existsSync(loaded.outputs.mp4),

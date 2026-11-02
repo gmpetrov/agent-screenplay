@@ -359,6 +359,9 @@ function draw(initial) {
   // The light from the top left belongs to linear gradients; mesh presets have their grain.
   $("glow").style.opacity = kindOf(style.background) === "gradient" && !(preset && preset.kind === "mesh") ? 1 : 0;
   $("grain").style.backgroundImage = `url(${grainUrl})`;
+  // Same tile size as the renderer: 128 px, doubled at 4K.
+  const tile = 128 * Math.max(1, Math.round(S.output.height / 1080));
+  $("grain").style.backgroundSize = `${tile}px ${tile}px`;
   $("grain").style.opacity = preset && preset.kind === "mesh" ? preset.grain : 0;
   Object.assign(win.style, { left: L.x + "px", top: L.y + "px", width: L.w + "px", height: L.h + "px", borderRadius: style.radius * L.k + "px",
     boxShadow: style.shadow ? `0 ${24 * L.k}px ${60 * L.k}px rgba(0,0,0,.35), 0 ${2 * L.k}px ${8 * L.k}px rgba(0,0,0,.18)` : "none" });
@@ -524,9 +527,9 @@ function sync() {
   const off = Math.abs(r - R) > 0.01;
   $("shapeNote").classList.toggle("on", off && style.padding < 24);
   const shape = Math.abs(R - 16 / 9) < 0.01 ? "16:9" : `${S.output.width}×${S.output.height}`;
-  const fit = Math.round((1440 * S.output.height) / S.output.width / 2) * 2;
+  const fit = S.defaultViewport;
   $("shapeNote").textContent = !off ? "" : `The ${S.url ? "recording" : "window"} is ${cap.width}×${cap.height}, not ${shape} like the video, so the background shows on the ${r < R ? "sides" : "top and bottom"}.` +
-    (S.url ? ` Record with a ${shape} viewport (such as 1440×${fit}, the default) to fill the frame.` : "");
+    (S.url ? ` Record with a ${shape} viewport (such as ${fit.width}×${fit.height}, the default) to fill the frame.` : "");
   const file = target === "project" ? S.configFile : S.scenarioFile;
   $("dest").textContent = (target === "project" ? (S.configExists ? "Saves to " : "Creates ") : "Saves to ") + file.split(/[\\/]/).pop();
   $("dest").title = file;

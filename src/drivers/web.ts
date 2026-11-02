@@ -33,13 +33,15 @@ export interface CheckReport {
 }
 
 /**
- * The browser size when the scenario sets none: 1440 wide, with the video's shape (1440x810
- * for 16:9), so with no padding the page fills the whole frame.
+ * The browser size when the scenario sets none: the video's shape with a longer side of 1440
+ * (1440x810 for 16:9, 810x1440 for a vertical video), so with no padding the page fills the
+ * whole frame.
  */
 export function defaultViewport(output?: { width?: number; height?: number }): { width: number; height: number } {
   const ow = output?.width ?? 1920;
   const oh = output?.height ?? 1080;
-  return { width: 1440, height: Math.round((1440 * oh) / ow / 2) * 2 };
+  const even = (n: number) => Math.round(n / 2) * 2;
+  return ow >= oh ? { width: 1440, height: even((1440 * oh) / ow) } : { width: even((1440 * ow) / oh), height: 1440 };
 }
 const ACTION_TIMEOUT_MS = 15_000;
 
