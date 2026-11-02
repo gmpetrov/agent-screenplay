@@ -4,4 +4,3 @@ dist
 *.mp4
 *.gif
 *.storyboard.png
-!examples/**/*.png
