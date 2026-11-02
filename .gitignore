@@ -1,0 +1,7 @@
+node_modules
+dist
+.screenplay
+*.mp4
+*.gif
+*.storyboard.png
+!examples/**/*.png
