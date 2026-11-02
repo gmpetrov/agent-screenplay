@@ -31,6 +31,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid rgba(255,255,255,
 .frame { position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 30px 80px rgba(0,0,0,.5); }
 .comp { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; }
 .bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: opacity 320ms var(--ease-out); }
+.grain { position: absolute; inset: 0; opacity: 0; background-size: 128px 128px; transition: opacity 320ms var(--ease-out); pointer-events: none; }
 .glow { position: absolute; inset: 0; background: radial-gradient(circle 1536px at 20% 10%, rgba(255,255,255,.18), rgba(255,255,255,0)); transition: opacity 320ms var(--ease-out); }
 .win { position: absolute; overflow: hidden; background: #fff;
   transition: left 280ms var(--ease-out), top 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out), border-radius 280ms var(--ease-out), box-shadow 280ms var(--ease-out); }
@@ -171,6 +172,7 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
         <div class="comp" id="comp">
           <div class="bg" id="bgA"></div><div class="bg" id="bgB" style="opacity:0"></div>
           <div class="glow" id="glow"></div>
+          <div class="grain" id="grain"></div>
           <div class="win" id="win"></div>
         </div>
         <video class="video" id="video" controls playsinline></video>
@@ -309,10 +311,34 @@ function fitStage() {
   $("comp").style.transform = `scale(${sc})`;
 }
 
+/* Same drawing as the renderer (src/render/presets.ts, paintMesh): color fields over a base. */
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${Math.max(0, Math.min(1, a)).toFixed(3)})`; };
+function meshCss(p, w, h) {
+  const side = Math.max(w, h);
+  const layers = p.blobs.map((b) => `radial-gradient(circle ${b.r * side}px at ${b.x * w}px ${b.y * h}px, ${rgba(b.color, b.alpha)} 0%, ${rgba(b.color, b.alpha * 0.6)} 40%, ${rgba(b.color, 0)} 100%)`);
+  return [...layers.reverse(), p.base].join(", ");
+}
+function presetCss(p, w, h) {
+  return p.kind === "mesh" ? meshCss(p, w, h) : `linear-gradient(${p.angle}deg, ${p.stops.join(", ")})`;
+}
+/* The grain tile: the renderer's seeded noise (mulberry32, seed 7), 128×128. */
+const grainUrl = (() => {
+  const N = 128, c = document.createElement("canvas"); c.width = c.height = N;
+  const ctx = c.getContext("2d"), img = ctx.createImageData(N, N);
+  let a = 7;
+  for (let i = 0; i < N * N; i++) {
+    a = (a + 0x6d2b79f5) >>> 0; let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    const v = ((t ^ (t >>> 14)) >>> 0) % 256;
+    img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v; img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return c.toDataURL();
+})();
 function bgCss(bg) {
   if (typeof bg === "object") return `linear-gradient(${bg.angle ?? 135}deg, ${bg.gradient.join(", ")})`;
   const p = S.presets[bg];
-  if (p) return `linear-gradient(${p.angle}deg, ${p.stops.join(", ")})`;
+  if (p) return presetCss(p, S.output.width, S.output.height);
   if (/^#/.test(bg)) return bg;
   if (imageRef) return `url("/api/image?t=${TOKEN}&from=${imageRef.from}&path=${encodeURIComponent(imageRef.path)}")`;
   return "#111";
@@ -329,7 +355,11 @@ function draw(initial) {
     if (initial) { $(back).style.transition = "none"; requestAnimationFrame(() => $(back).style.transition = ""); }
     $(back).style.opacity = 1; $(front).style.opacity = 0; front = back; lastBg = css;
   }
-  $("glow").style.opacity = kindOf(style.background) === "gradient" ? 1 : 0;
+  const preset = typeof style.background === "string" ? S.presets[style.background] : null;
+  // The light from the top left belongs to linear gradients; mesh presets have their grain.
+  $("glow").style.opacity = kindOf(style.background) === "gradient" && !(preset && preset.kind === "mesh") ? 1 : 0;
+  $("grain").style.backgroundImage = `url(${grainUrl})`;
+  $("grain").style.opacity = preset && preset.kind === "mesh" ? preset.grain : 0;
   Object.assign(win.style, { left: L.x + "px", top: L.y + "px", width: L.w + "px", height: L.h + "px", borderRadius: style.radius * L.k + "px",
     boxShadow: style.shadow ? `0 ${24 * L.k}px ${60 * L.k}px rgba(0,0,0,.35), 0 ${2 * L.k}px ${8 * L.k}px rgba(0,0,0,.18)` : "none" });
   if (!win.dataset.built) {
@@ -361,7 +391,7 @@ function setKind(k, initial) {
   if (initial) return;
   const cur = style.background, curKind = kindOf(cur);
   if (k === curKind) return;
-  if (k === "gradient") style.background = lastGradient || "ocean";
+  if (k === "gradient") style.background = lastGradient || S.defaults.background;
   if (k === "color") style.background = lastColor || "#0f172a";
   if (k === "image") { if (imageRef) style.background = imageRef.path; else { sync(); return; } }
   change();
@@ -370,10 +400,12 @@ let lastGradient = null, lastColor = null;
 
 function buildSwatches() {
   const pre = $("presets");
-  for (const [name, p] of Object.entries(S.presets)) {
+  for (const name of S.offered) {
+    const p = S.presets[name];
     const b = document.createElement("button");
     b.className = "sw"; b.dataset.v = name; b.title = name; b.setAttribute("aria-label", name);
-    b.style.background = `linear-gradient(${p.angle}deg, ${p.stops.join(", ")})`;
+    // A swatch is the same mesh, drawn on a square.
+    b.style.background = presetCss(p, 60, 60);
     b.onclick = () => { style.background = name; change(); };
     pre.appendChild(b);
   }
@@ -393,8 +425,8 @@ function buildSwatches() {
 function currentStops() {
   const bg = style.background;
   if (typeof bg === "object") return { stops: bg.gradient, angle: bg.angle ?? 135 };
-  const p = S.presets[bg] || S.presets.ocean;
-  return { stops: [p.stops[0], p.stops[p.stops.length - 1]], angle: p.angle };
+  const p = S.presets[bg] || S.presets[S.defaults.background];
+  return { stops: p.colors, angle: p.kind === "linear" ? p.angle : 135 };
 }
 function customGradient() {
   if (typeof style.background === "object") return style.background;

@@ -126,3 +126,19 @@ describe("default viewport", () => {
     expect(defaultViewport({ width: 1920, height: 1200 })).toEqual({ width: 1440, height: 900 });
   });
 });
+
+describe("background presets", () => {
+  it("draws the mesh presets, defaults to aurora, and still accepts the first presets", async () => {
+    const mesh = await resolveStyle({ background: "lagoon" }, ".");
+    expect(mesh.background.kind).toBe("mesh");
+    expect(mesh.darkBackground).toBe(false);
+    expect((await resolveStyle(undefined, ".")).background).toMatchObject({ kind: "mesh", base: "#070b1a" });
+    expect((await resolveStyle({ background: "ocean" }, ".")).background).toMatchObject({ kind: "gradient", angle: 135 });
+  });
+
+  it("paints grain deterministically, so the editor can match it", async () => {
+    const { noiseValues } = await import("../src/render/presets.js");
+    expect(Array.from(noiseValues().slice(0, 4))).toEqual(Array.from(noiseValues().slice(0, 4)));
+    expect(new Set(noiseValues()).size).toBeGreaterThan(200);
+  });
+});

@@ -156,7 +156,9 @@ export const Step = z.union([
 ]);
 export type Step = z.infer<typeof Step>;
 
-export const BACKGROUNDS = ["sunset", "ocean", "lavender", "forest", "midnight", "mono", "paper"] as const;
+/** Presets offered today (mesh gradients), then the first ones, still accepted. See render/presets.ts. */
+export const BACKGROUNDS = ["aurora", "sky", "dusk", "ember", "graphite", "lagoon", "lilac", "peach", "linen", "sunset", "ocean", "lavender", "forest", "midnight", "mono", "paper"] as const;
+export const CURRENT_BACKGROUNDS = BACKGROUNDS.slice(0, 9);
 
 const Color = z.string().regex(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i, "a hex color like #0ea5e9");
 
@@ -174,7 +176,7 @@ export const Style = z
       .union([z.string(), Gradient])
       .optional()
       .describe(
-        `A preset (${BACKGROUNDS.join(", ")}), a color like #0f172a, an image path (relative to the file that sets it), or a gradient { "gradient": ["#0ea5e9", "#6366f1"], "angle": 135 }.`,
+        `A preset (${CURRENT_BACKGROUNDS.join(", ")}; default aurora), a color like #0f172a, an image path (relative to the file that sets it), or a gradient { "gradient": ["#0ea5e9", "#6366f1"], "angle": 135 }.`,
       ),
     padding: z.number().min(0).max(400).optional().describe("Space around the recording, in output pixels (default 72)."),
     radius: z.number().min(0).max(80).optional().describe("Corner radius of the recording (default 14)."),

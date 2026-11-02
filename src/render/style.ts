@@ -1,21 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { GlobalFonts, type SKRSContext2D, loadImage, type Image } from "@napi-rs/canvas";
+import { GlobalFonts, createCanvas, type SKRSContext2D, loadImage, type Image } from "@napi-rs/canvas";
 import type { Style } from "../scenario/schema.js";
+import { ALL_PRESETS, DEFAULT_BACKGROUND, NOISE_TILE, noiseValues, type Blob } from "./presets.js";
 
-export const PRESETS: Record<string, { stops: string[]; angle: number; dark: boolean }> = {
-  sunset: { stops: ["#fb923c", "#f43f5e", "#a21caf"], angle: 135, dark: true },
-  ocean: { stops: ["#22d3ee", "#3b82f6", "#4338ca"], angle: 135, dark: true },
-  lavender: { stops: ["#e9d5ff", "#c4b5fd", "#f5d0fe"], angle: 135, dark: false },
-  forest: { stops: ["#34d399", "#059669", "#064e3b"], angle: 135, dark: true },
-  midnight: { stops: ["#1e1b4b", "#0f172a", "#020617"], angle: 160, dark: true },
-  mono: { stops: ["#f4f4f5", "#d4d4d8"], angle: 160, dark: false },
-  paper: { stops: ["#fbf8f3", "#eee7dc"], angle: 160, dark: false },
-};
+/** @deprecated kept for imports; see presets.ts. */
+export const PRESETS = ALL_PRESETS;
 
 export interface ResolvedStyle {
-  background: { kind: "gradient"; stops: string[]; angle: number } | { kind: "color"; color: string } | { kind: "image"; image: Image };
+  background:
+    | { kind: "gradient"; stops: string[]; angle: number }
+    | { kind: "mesh"; base: string; blobs: Blob[]; grain: number }
+    | { kind: "color"; color: string }
+    | { kind: "image"; image: Image };
   darkBackground: boolean;
   padding: number;
   radius: number;
@@ -31,22 +29,23 @@ export interface ResolvedStyle {
 
 export async function resolveStyle(style: Style | undefined, baseDir: string): Promise<ResolvedStyle> {
   const s = style ?? {};
-  const bg = s.background ?? "ocean";
+  const bg = s.background ?? DEFAULT_BACKGROUND;
   let background: ResolvedStyle["background"];
   let dark = true;
   if (typeof bg === "object") {
     background = { kind: "gradient", stops: bg.gradient, angle: bg.angle ?? 135 };
     dark = bg.gradient.filter(isDarkColor).length * 2 >= bg.gradient.length;
-  } else if (PRESETS[bg]) {
-    background = { kind: "gradient", stops: PRESETS[bg].stops, angle: PRESETS[bg].angle };
-    dark = PRESETS[bg].dark;
+  } else if (ALL_PRESETS[bg]) {
+    const p = ALL_PRESETS[bg];
+    background = p.kind === "mesh" ? { kind: "mesh", base: p.base, blobs: p.blobs, grain: p.grain } : { kind: "gradient", stops: p.stops, angle: p.angle };
+    dark = p.dark;
   } else if (/^(#|rgb|hsl)/i.test(bg)) {
     background = { kind: "color", color: bg };
     dark = isDarkColor(bg);
   } else {
     const file = path.resolve(baseDir, bg);
     if (!fs.existsSync(file)) {
-      throw new Error(`Background "${bg}" is not a preset (${Object.keys(PRESETS).join(", ")}), a color, or an existing image.`);
+      throw new Error(`Background "${bg}" is not a preset (${Object.keys(ALL_PRESETS).join(", ")}), a color, or an existing image.`);
     }
     background = { kind: "image", image: await loadImage(fs.readFileSync(file)) };
   }
@@ -83,6 +82,10 @@ export function paintBackground(ctx: SKRSContext2D, bg: ResolvedStyle["backgroun
     ctx.fillRect(0, 0, w, h);
     return;
   }
+  if (bg.kind === "mesh") {
+    paintMesh(ctx, bg, w, h);
+    return;
+  }
   if (bg.kind === "image") {
     const img = bg.image;
     const k = Math.max(w / img.width, h / img.height);
@@ -108,6 +111,42 @@ export function paintBackground(ctx: SKRSContext2D, bg: ResolvedStyle["backgroun
   glow.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, w, h);
+}
+
+/** Color fields over a base color, then grain. The editor's preview draws the same thing in CSS. */
+function paintMesh(ctx: SKRSContext2D, bg: { base: string; blobs: Blob[]; grain: number }, w: number, h: number) {
+  ctx.fillStyle = bg.base;
+  ctx.fillRect(0, 0, w, h);
+  const side = Math.max(w, h);
+  for (const b of bg.blobs) {
+    const cx = b.x * w,
+      cy = b.y * h,
+      r = b.r * side;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, rgba(b.color, b.alpha));
+    g.addColorStop(0.4, rgba(b.color, b.alpha * 0.6));
+    g.addColorStop(1, rgba(b.color, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+  if (bg.grain > 0) {
+    const tile = createCanvas(NOISE_TILE, NOISE_TILE);
+    const tctx = tile.getContext("2d");
+    const img = tctx.createImageData(NOISE_TILE, NOISE_TILE);
+    const v = noiseValues();
+    for (let i = 0; i < v.length; i++) {
+      img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v[i];
+      img.data[i * 4 + 3] = Math.round(bg.grain * 255);
+    }
+    tctx.putImageData(img, 0, 0);
+    const k = Math.max(1, Math.round(h / 1080));
+    for (let y = 0; y < h; y += NOISE_TILE * k) for (let x = 0; x < w; x += NOISE_TILE * k) ctx.drawImage(tile, x, y, NOISE_TILE * k, NOISE_TILE * k);
+  }
+}
+
+export function rgba(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${Math.max(0, Math.min(1, a)).toFixed(3)})`;
 }
 
 let fontsLoaded = false;

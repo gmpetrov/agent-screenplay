@@ -90,7 +90,7 @@
       "type": "object",
       "properties": {
         "background": {
-          "description": "A preset (sunset, ocean, lavender, forest, midnight, mono, paper), a color like #0f172a, an image path (relative to the file that sets it), or a gradient { \"gradient\": [\"#0ea5e9\", \"#6366f1\"], \"angle\": 135 }.",
+          "description": "A preset (aurora, sky, dusk, ember, graphite, lagoon, lilac, peach, linen; default aurora), a color like #0f172a, an image path (relative to the file that sets it), or a gradient { \"gradient\": [\"#0ea5e9\", \"#6366f1\"], \"angle\": 135 }.",
           "anyOf": [
             {
               "type": "string"

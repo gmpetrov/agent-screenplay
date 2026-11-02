@@ -11,7 +11,7 @@ import { loadScenario } from "../scenario/load.js";
 import { BACKGROUNDS, Style, type Style as StyleT } from "../scenario/schema.js";
 import { readTake, type Take } from "../take.js";
 import { openSource } from "../render/sources.js";
-import { PRESETS } from "../render/style.js";
+import { ALL_PRESETS, DEFAULT_BACKGROUND, MESH_PRESETS, presetColors } from "../render/presets.js";
 import { defaultViewport } from "../drivers/web.js";
 
 /**
@@ -128,8 +128,10 @@ export function state(scenarioFile: string) {
     capture: take ? { width: take.width, height: take.height } : loaded.scenario.url ? (loaded.scenario.viewport ?? defaultViewport(loaded.scenario.output)) : null,
     hasTake: Boolean(take),
     hasVideo: fs.existsSync(loaded.outputs.mp4),
-    presets: Object.fromEntries(BACKGROUNDS.map((b) => [b, PRESETS[b]])),
-    defaults: { background: "ocean", padding: 72, radius: 14, shadow: true },
+    /** Every preset the page may have to draw, and the ones it offers. */
+    presets: Object.fromEntries(Object.entries(ALL_PRESETS).map(([k, p]) => [k, { ...p, colors: presetColors(p) }])),
+    offered: Object.keys(MESH_PRESETS),
+    defaults: { background: DEFAULT_BACKGROUND, padding: 72, radius: 14, shadow: true },
   };
 }
 
