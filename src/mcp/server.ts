@@ -6,6 +6,7 @@ import { loadImage, createCanvas } from "@napi-rs/canvas";
 import { z } from "zod";
 import { check, record, render } from "../core.js";
 import { guideText } from "../guide.js";
+import { parseScenario } from "../scenario/load.js";
 import { VERSION } from "../version.js";
 
 const INSTRUCTIONS = `Screenplay makes Screen Studio-quality screen recordings (smooth cursor, auto-zoom, callouts, captions, optional voice-over) from a JSON scenario you write.
@@ -17,7 +18,10 @@ const PathArg = z
 const ScenarioArg = z
   .record(z.string(), z.unknown())
   .optional()
-  .describe("Optional scenario object: written to `path` first (overwriting it), then used.");
+  .describe("Optional scenario object: validated, then written to `path` (overwriting that file), then used.");
+
+const SIDE_EFFECTS =
+  " It really performs the steps in the app (a click on Send sends, a click on Delete deletes): use a demo account or a staging environment.";
 
 // One recording at a time: each one runs a browser and a video encoder.
 let queue: Promise<unknown> = Promise.resolve();
@@ -30,6 +34,7 @@ function serialize<T>(job: () => Promise<T>): Promise<T> {
 function resolvePath(p: string, scenario?: Record<string, unknown>): string {
   const abs = path.resolve(process.cwd(), p);
   if (scenario) {
+    parseScenario(scenario); // never overwrite a file with an invalid scenario
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, JSON.stringify(scenario, null, 2) + "\n");
   }
@@ -78,9 +83,10 @@ export async function startMcpServer() {
     {
       title: "Check a scenario",
       description:
-        "Play the scenario quickly without filming. Reports each step; for a missing element, lists the visible targets you can use instead, with a screenshot of where it stopped.",
+        "Play the scenario quickly without filming. Reports each step; for a missing element, lists the visible targets you can use instead, with a screenshot of where it stopped." +
+        SIDE_EFFECTS,
       inputSchema: { path: PathArg, scenario: ScenarioArg },
-      annotations: { readOnlyHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
     },
     async ({ path: p, scenario }, extra) =>
       serialize(async () => {
@@ -108,8 +114,10 @@ export async function startMcpServer() {
     {
       title: "Film and edit a scenario",
       description:
-        "Film the scenario and edit the video. Returns the MP4 path and the storyboard (one image per step): look at it and fix framing, bubbles or data before handing the video over. Takes about the length of the video plus a few seconds per 10 seconds of video.",
+        "Film the scenario and edit the video. Returns the MP4 path and the storyboard (one image per step): look at it and fix framing, bubbles or data before handing the video over. Takes about the length of the video plus a few seconds per 10 seconds of video." +
+        SIDE_EFFECTS,
       inputSchema: recordArgs,
+      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
     },
     async ({ path: p, scenario, gif, noVoice }, extra) =>
       serialize(async () => {
@@ -133,8 +141,9 @@ export async function startMcpServer() {
     {
       title: "Edit the last recording again",
       description:
-        "Re-edit the last recording of this scenario without filming: use it after changing text, narration (say), callouts, style, zoom or output. Changing actions needs screenplay_record.",
+        "Re-edit the last recording of this scenario without filming: use it after changing text, narration (say), callouts, style, zoom or output. Changing actions needs screenplay_record. Does not touch the app; writes the video files.",
       inputSchema: recordArgs,
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     async ({ path: p, scenario, gif, noVoice }, extra) =>
       serialize(async () => {

@@ -405,9 +405,16 @@ async function play(
             break;
           }
           case "hover": {
+            // Hover moves the real pointer (menus and tooltips need it); it is not filmed, the drawn cursor is.
             const r = await resolve(step.hover);
             await travelTo(r.box);
             ts.actionAt = now();
+            if (r.ref) await ds.ad.call(["--headed", "hover", r.ref]);
+            else {
+              const x = Math.round(ds.win.bounds.x + r.box.x + r.box.width / 2);
+              const y = Math.round(ds.win.bounds.y + r.box.y + r.box.height / 2);
+              await ds.ad.call(["--headed", "mouse-move", "--xy", `${x},${y}`]);
+            }
             break;
           }
           case "type": {

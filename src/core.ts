@@ -4,6 +4,7 @@ import { loadScenario, type LoadedScenario } from "./scenario/load.js";
 import { runWeb, type CheckReport } from "./drivers/web.js";
 import { readingTime } from "./drivers/pace.js";
 import { readTake, writeTake, type Take } from "./take.js";
+import { captureInputs } from "./scenario/fingerprint.js";
 import { renderTake, type RenderResult } from "./render/render.js";
 import { synthesizeAll, type Clip } from "./voice/cartesia.js";
 
@@ -54,6 +55,7 @@ export async function record(file: string, opts: RunOptions = {}): Promise<Recor
     const { runDesktop } = await import("./drivers/desktop.js");
     take = await runDesktop(loaded, { mode: "record", minDurations: minDurations(loaded, audio), log: opts.log });
   }
+  take.inputs = captureInputs(loaded.scenario);
   const takeFile = writeTake(loaded.takeDir, take);
   opts.log?.("Editing the video");
   const result = await renderTake(loaded, take, { audio, gif: opts.gif, log: opts.log });

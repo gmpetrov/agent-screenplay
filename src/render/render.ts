@@ -3,7 +3,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { createCanvas, type Canvas } from "@napi-rs/canvas";
 import type { LoadedScenario } from "../scenario/load.js";
-import { stepKind } from "../scenario/schema.js";
+import { captureMismatch } from "../scenario/fingerprint.js";
 import type { Take } from "../take.js";
 import { cursorAt, locate, OVERLAY_DELAY, planTake, type Plan } from "../direct/plan.js";
 import { ffmpegPath, runFfmpeg } from "../ffmpeg.js";
@@ -109,7 +109,7 @@ export async function renderTake(loaded: LoadedScenario, take: Take, opts: Rende
       const prev = plan.pieces[loc.index - 1];
       const next = plan.pieces[loc.index + 1];
       if (loc.piece.kind === "card") {
-        const card = loc.piece.step.card!;
+        const card = loc.piece.card;
         const u = o - loc.piece.o0;
         if (u < FADE && prev?.kind === "capture") {
           await drawCaptureAt(prev.s1, o, f);
@@ -119,7 +119,7 @@ export async function renderTake(loaded: LoadedScenario, take: Take, opts: Rende
         await drawCaptureAt(loc.s!, o, f);
         const u = o - loc.piece.o0;
         if (u < FADE && prev?.kind === "card") {
-          drawCard(ctx, layout, style, bgLayer, prev.step.card!, prev.o1 - prev.o0 + u, 1 - clamp01(u / FADE));
+          drawCard(ctx, layout, style, bgLayer, prev.card, prev.o1 - prev.o0 + u, 1 - clamp01(u / FADE));
         }
         void next;
       }
@@ -196,13 +196,12 @@ export async function renderTake(loaded: LoadedScenario, take: Take, opts: Rende
   }
 }
 
-/** The take must come from the same steps (same kinds, same order) as the scenario. */
+/** The take must come from the same actions as the scenario: only editing choices may change. */
 function checkStepsMatch(loaded: LoadedScenario, take: Take) {
-  const kinds = loaded.scenario.steps.map(stepKind);
-  const takeKinds = take.steps.map((s) => s.kind);
-  if (kinds.length !== takeKinds.length || kinds.some((k, i) => k !== takeKinds[i])) {
+  const why = captureMismatch(loaded.scenario, take.inputs, take.steps.map((s) => s.kind));
+  if (why) {
     throw new Error(
-      "The scenario's steps changed since the last recording (only text, narration, style and zoom can change without filming again). Run `screenplay record` again.",
+      `The recording no longer matches the scenario: ${why}. Only narration (say), callout text, card text, zoom, style, voice and output can change without filming again. Run \`screenplay record\` again.`,
     );
   }
 }

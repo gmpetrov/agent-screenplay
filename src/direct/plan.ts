@@ -1,5 +1,6 @@
 import type { Scenario, Step } from "../scenario/schema.js";
 import type { Box, Point, Take, TakeStep } from "../take.js";
+import { cardDuration } from "../drivers/pace.js";
 
 /**
  * The edit of a take: how output time maps to recording time, where the
@@ -9,7 +10,13 @@ import type { Box, Point, Take, TakeStep } from "../take.js";
 
 export type Piece =
   | { kind: "capture"; o0: number; o1: number; s0: number; s1: number }
-  | { kind: "card"; o0: number; o1: number; step: TakeStep };
+  | { kind: "card"; o0: number; o1: number; step: TakeStep; card: CardContent };
+
+export interface CardContent {
+  kind: "title" | "end";
+  title: string;
+  subtitle?: string;
+}
 
 export interface Camera {
   z: number;
@@ -129,8 +136,12 @@ export function planTake(take: Take, scenario: Scenario, opts: PlanOptions): Pla
       // An opening card starts the video: drop the still lead-in recorded before it.
       if (pieces.length === 0) sp = st.start;
       emitCapture(st.start);
-      const dur = Math.max(st.card.duration, audio ? audio.duration + 0.6 : 0);
-      pieces.push({ kind: "card", o0: op, o1: op + dur, step: st });
+      // Card text and length come from the scenario as it is now: they can change without filming again.
+      const sc = scenario.steps[st.index] as { title?: string; end?: string; subtitle?: string; duration?: number };
+      const title = (st.card.kind === "title" ? sc.title : sc.end) ?? st.card.title;
+      const base = sc.duration ?? cardDuration(title, sc.subtitle);
+      const dur = Math.max(base, audio ? audio.duration + 0.6 : 0);
+      pieces.push({ kind: "card", o0: op, o1: op + dur, step: st, card: { kind: st.card.kind, title, subtitle: sc.subtitle } });
       stepTimes[st.index] = { o0: op, o1: op + dur };
       if (audio) voice.push({ file: audio.file, at: op + 0.25, duration: audio.duration });
       op += dur;

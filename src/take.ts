@@ -81,6 +81,8 @@ export interface Take {
   cursorStart: Point;
   source: FramesSource | VideoSource;
   steps: TakeStep[];
+  /** What the recording depends on (see scenario/fingerprint.ts), to refuse re-rendering a changed scenario. */
+  inputs?: { setup: string; steps: string[] };
 }
 
 export function writeTake(dir: string, take: Take): string {

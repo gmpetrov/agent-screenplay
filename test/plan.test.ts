@@ -5,7 +5,7 @@ import type { Take } from "../src/take.js";
 
 const scenario = parseScenario({
   url: "https://example.com",
-  steps: [{ title: "Hello" }, { click: "text=A", say: "Click A" }, { wait: "text=Done" }, { click: "text=B", zoom: false }],
+  steps: [{ title: "Hello", duration: 2 }, { click: "text=A", say: "Click A" }, { wait: "text=Done" }, { click: "text=B", zoom: false }],
 });
 
 function take(): Take {
@@ -75,6 +75,15 @@ describe("planTake", () => {
     const at = locate(plan, plan.stepTimes[1].oAction!);
     expect(at.piece.kind).toBe("capture");
     expect(at.s).toBeCloseTo(1.2, 2);
+  });
+
+  it("takes card text and length from the scenario as it is now", () => {
+    const edited = parseScenario({
+      url: "https://example.com",
+      steps: [{ title: "New title", subtitle: "New", duration: 1 }, { click: "text=A" }, { wait: "text=Done" }, { click: "text=B" }],
+    });
+    const p = planTake(take(), edited, { fps: 30, audio: new Map(), autoZoom: true, maxZoom: 1.9, captions: true });
+    expect(p.pieces[0]).toMatchObject({ kind: "card", o0: 0, o1: 1, card: { title: "New title", subtitle: "New" } });
   });
 
   it("holds the image when narration is longer than the step", () => {
