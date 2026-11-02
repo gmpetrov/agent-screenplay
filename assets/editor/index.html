@@ -558,8 +558,10 @@ function showVideo(on) {
 }
 $("tabPreview").onclick = () => showVideo(false);
 $("tabVideo").onclick = () => showVideo(true);
-document.addEventListener("input", () => showVideo(false), true);
-document.addEventListener("click", (e) => { if (e.target.closest(".side") && !e.target.closest(".foot")) showVideo(false); }, true);
+// Changing a setting shows the preview again; using the video's own controls (seek, volume) does not.
+const editsStyle = (e) => e.target instanceof Element && e.target.closest(".side") && !e.target.closest(".foot");
+document.addEventListener("input", (e) => { if (editsStyle(e)) showVideo(false); }, true);
+document.addEventListener("click", (e) => { if (editsStyle(e)) showVideo(false); }, true);
 
 let toastT;
 function toast(msg, err) {
