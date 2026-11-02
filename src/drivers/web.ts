@@ -281,6 +281,8 @@ async function runStep(page: Page, step: Step, ts: TakeStep, cursor: Point, ctx:
       };
       return cursor;
     }
+    case "open":
+      throw new Error("open works in desktop recordings with \"screen\": true, not on websites.");
     case "goto": {
       const url = new URL(s.goto, ctx.baseUrl).toString();
       const w0 = now();

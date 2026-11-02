@@ -18,6 +18,8 @@ export const Target = z
     "The element to act on: text=…, role=button[name='…'], label=…, placeholder=…, testid=…, css=… (web only). A bare string means text=.",
   );
 
+export const SURFACES = ["window", "menubar", "menu", "sheet", "popover", "alert"] as const;
+
 const Common = {
   say: z
     .string()
@@ -35,8 +37,26 @@ const Common = {
     .max(30)
     .optional()
     .describe("Extra seconds to stay on the result of this step before the next one."),
+  app: z
+    .string()
+    .optional()
+    .describe(
+      'Desktop: the app this step acts in (default: the scenario\'s app, or the last one opened). Another app than the scenario\'s needs "screen": true; there it also becomes the app the next steps act in.',
+    ),
+  surface: z
+    .enum(SURFACES)
+    .optional()
+    .describe(
+      "Desktop: where to look for the element: window (default, the app's front window), menubar (the app's menus in the menu bar), menu (an open menu), sheet, popover or alert.",
+    ),
 };
 
+const Open = z
+  .object({
+    open: z.string().describe('Desktop, with "screen": true: launch this app or bring it to the front. The next steps act in it.'),
+    ...Common,
+  })
+  .strict();
 const Goto = z.object({ goto: z.string().describe("URL or path to open (relative to the scenario url)."), ...Common }).strict();
 const Click = z
   .object({
@@ -119,6 +139,7 @@ const ZoomTo = z
 
 export const Step = z.union([
   Goto,
+  Open,
   Click,
   Type,
   Press,
@@ -184,7 +205,20 @@ export const Scenario = z
     $schema: z.string().optional(),
     name: z.string().optional().describe("Name of the video (default: the file name)."),
     url: z.string().optional().describe("Web: the page to start on."),
-    app: z.string().optional().describe("Desktop: the application to film, as the OS names it."),
+    app: z
+      .string()
+      .optional()
+      .describe('Desktop: the application to film, as the OS names it. With "screen": true, the app brought to the front first (optional).'),
+    screen: z
+      .boolean()
+      .optional()
+      .describe(
+        "Desktop: film the whole main screen instead of one app's window, to show several apps or the menu bar. Everything on screen is filmed (notifications, other windows, the menu bar icons): close or hide what should not be seen.",
+      ),
+    hideOthers: z
+      .boolean()
+      .optional()
+      .describe("Desktop, macOS, with \"screen\": true: hide the other apps before filming (Hide Others, ⌥⌘H, in `app`). Default false."),
     viewport: z
       .object({ width: z.number().int().min(320).max(3840), height: z.number().int().min(240).max(2160) })
       .optional()
@@ -203,13 +237,17 @@ export const Scenario = z
     steps: z.array(Step).min(1),
   })
   .strict()
-  .refine((s) => Boolean(s.url) !== Boolean(s.app), {
-    message: "Give exactly one of `url` (a website) or `app` (a desktop application).",
+  .refine((s) => Boolean(s.url) !== Boolean(s.app || s.screen), {
+    message: "Give either `url` (a website), or `app` (a desktop application's window) and/or `\"screen\": true` (the whole screen).",
+  })
+  .refine((s) => !s.url || s.steps.every((st) => !("open" in st) && !("app" in st) && !("surface" in st)), {
+    message: "`open`, `app` and `surface` in steps are for desktop recordings, not websites.",
   });
 export type Scenario = z.infer<typeof Scenario>;
 
 export type StepKind =
   | "goto"
+  | "open"
   | "click"
   | "type"
   | "press"
@@ -226,6 +264,7 @@ export type StepKind =
 
 const KINDS: StepKind[] = [
   "goto",
+  "open",
   "click",
   "type",
   "press",

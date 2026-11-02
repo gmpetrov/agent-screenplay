@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { StepKind } from "./scenario/schema.js";
 
-/** A rectangle in source coordinates (CSS pixels of the filmed viewport or window). */
+/** A rectangle in source coordinates (CSS pixels of the filmed viewport, or points of the filmed window or screen). */
 export interface Box {
   x: number;
   y: number;
@@ -71,7 +71,7 @@ export interface Take {
   name: string;
   recordedAt: string;
   platform: NodeJS.Platform;
-  target: { kind: "web"; url: string } | { kind: "desktop"; app: string };
+  target: { kind: "web"; url: string } | { kind: "desktop"; app: string; screen?: boolean };
   /** Size of the filmed area in source coordinates (CSS pixels / logical points). */
   width: number;
   height: number;

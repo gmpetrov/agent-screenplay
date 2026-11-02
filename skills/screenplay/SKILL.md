@@ -43,6 +43,30 @@ Tools: the MCP tools `screenplay_check`, `screenplay_record`, `screenplay_render
 
 `url` for a website (a relative path means a local HTML file). `app` instead of `url` for a desktop application (its name as the OS shows it).
 
+### The whole screen (desktop)
+
+`"screen": true` films the whole main screen instead of one window: use it when the video goes from one app to another, or shows the menu bar. `app` is then optional (the app brought to the front first).
+
+- `{ "open": "Dictionary" }` launches an app or brings it to the front; the next steps act in it.
+- A step's `"app": "Finder"` acts in another app for that step (and the next ones).
+- A step's `"surface": "menubar"` looks for the element in the app's menu bar; `"menu"` in an open menu; also `sheet`, `popover`, `alert`.
+
+Everything on screen is filmed: notifications, other windows, desktop icons and widgets. Before recording, close what should not be seen, turn on Do Not Disturb, and set `"hideOthers": true` (macOS) to hide the other apps. Some windows (menu bar apps' panels) ignore Hide Others: close them. Prefer a window recording when the video stays in one app.
+
+```json
+{
+  "screen": true,
+  "app": "Calculator",
+  "hideOthers": true,
+  "steps": [
+    { "click": "role=button[name='7']" },
+    { "open": "Dictionary" },
+    { "type": "screenplay", "into": "role=textfield" },
+    { "click": "role=menuitem[name='Edit']", "surface": "menubar" }
+  ]
+}
+```
+
 ### Targets
 
 Name elements the way a user sees them, never with coordinates:
