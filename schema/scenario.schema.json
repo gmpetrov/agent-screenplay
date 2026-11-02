@@ -90,8 +90,37 @@
       "type": "object",
       "properties": {
         "background": {
-          "description": "A preset (sunset, ocean, lavender, forest, midnight, mono, paper), a CSS color like #0f172a, or an image path.",
-          "type": "string"
+          "description": "A preset (sunset, ocean, lavender, forest, midnight, mono, paper), a color like #0f172a, an image path (relative to the file that sets it), or a gradient { \"gradient\": [\"#0ea5e9\", \"#6366f1\"], \"angle\": 135 }.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "gradient": {
+                  "minItems": 2,
+                  "maxItems": 4,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^#([0-9a-f]{3}|[0-9a-f]{6})$"
+                  },
+                  "description": "2 to 4 hex colors, from the start of the gradient to its end."
+                },
+                "angle": {
+                  "description": "Direction in degrees, as in CSS: 90 goes left to right, 180 top to bottom (default 135).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 360
+                }
+              },
+              "required": [
+                "gradient"
+              ],
+              "additionalProperties": false
+            }
+          ]
         },
         "padding": {
           "description": "Space around the recording, in output pixels (default 72).",

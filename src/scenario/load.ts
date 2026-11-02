@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { Scenario } from "./schema.js";
+import { BACKGROUNDS, Scenario } from "./schema.js";
+import { absolutizeStyle, findProjectConfig, mergeStyles, readProjectConfig } from "./config.js";
 
 export interface LoadedScenario {
   scenario: Scenario;
@@ -16,6 +17,8 @@ export interface LoadedScenario {
   /** Directory of the latest take of this scenario. */
   takeDir: string;
   outputs: { mp4: string; gif: string; storyboard: string };
+  /** The project's screenplay.config.json, when one applies (its style is merged into `scenario.style`). */
+  projectConfig?: string;
 }
 
 export class ScenarioError extends Error {}
@@ -71,6 +74,17 @@ export function loadScenario(file: string, opts: { env?: boolean } = {}): Loaded
   if (scenario.url && !/^[a-z][a-z0-9+.-]*:/i.test(scenario.url)) {
     scenario = { ...scenario, url: pathToFileURL(path.resolve(dir, scenario.url)).toString() };
   }
+  const projectConfig = findProjectConfig(dir);
+  if (projectConfig) {
+    let config;
+    try {
+      config = readProjectConfig(projectConfig);
+    } catch (e) {
+      throw new ScenarioError((e as Error).message);
+    }
+    const projectStyle = absolutizeStyle(config.style, path.dirname(projectConfig), BACKGROUNDS);
+    scenario = { ...scenario, style: mergeStyles(projectStyle, scenario.style) };
+  }
   const base = path.basename(abs).replace(/\.json$/i, "").replace(/\.screenplay$/i, "");
   const name = scenario.name ?? base;
   const slug = slugify(name);
@@ -85,6 +99,7 @@ export function loadScenario(file: string, opts: { env?: boolean } = {}): Loaded
     workDir,
     takeDir: path.join(workDir, "takes", slug),
     outputs: { mp4, gif: `${stem}.gif`, storyboard: `${stem}.storyboard.png` },
+    projectConfig,
   };
 }
 

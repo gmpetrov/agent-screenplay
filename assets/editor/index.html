@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screenplay · Style</title>
+<style>
+:root {
+  --bg: #0a0a0b; --panel: #121214; --raised: #1a1a1d; --line: rgba(255,255,255,.07); --line-2: rgba(255,255,255,.12);
+  --text: #ededef; --muted: #8b8b93; --faint: #5c5c63; --accent: #ffffff;
+  --ease-out: cubic-bezier(.23, 1, .32, 1); --ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --r: 10px;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  color: var(--text); background: var(--bg); color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid rgba(255,255,255,.5); outline-offset: 2px; }
+
+.app { display: grid; grid-template-columns: 1fr 320px; height: 100%; }
+.main { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; }
+.top { display: flex; align-items: center; gap: 10px; padding: 16px 24px; font-size: 13px; color: var(--muted); }
+.top b { color: var(--text); font-weight: 600; }
+.top .sep { color: var(--faint); }
+
+/* Stage: the 16:9 composition, scaled to fit. */
+.stage { position: relative; display: grid; place-items: center; padding: 8px 40px 16px; min-height: 0; }
+.fit { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+.frame { position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 30px 80px rgba(0,0,0,.5); }
+.comp { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; }
+.bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: opacity 320ms var(--ease-out); }
+.glow { position: absolute; inset: 0; background: radial-gradient(circle 1536px at 20% 10%, rgba(255,255,255,.18), rgba(255,255,255,0)); transition: opacity 320ms var(--ease-out); }
+.win { position: absolute; overflow: hidden; background: #fff;
+  transition: left 280ms var(--ease-out), top 280ms var(--ease-out), width 280ms var(--ease-out), height 280ms var(--ease-out), border-radius 280ms var(--ease-out), box-shadow 280ms var(--ease-out); }
+.live .win { transition: none; }
+.win img { position: absolute; left: 0; width: 100%; display: block; }
+.bar { position: absolute; left: 0; right: 0; top: 0; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; }
+.bar i { width: 12px; height: 12px; border-radius: 50%; margin-left: 8px; }
+.bar i:first-child { margin-left: 16px; }
+.bar span { position: absolute; left: 25%; right: 25%; height: 24px; border-radius: 6px; background: #fff; font: 13px Inter, system-ui, sans-serif; color: #6b7280; display: grid; place-items: center; }
+.placeholder { position: absolute; inset: 0; background: #f8fafc; }
+.placeholder div { position: absolute; border-radius: 10px; background: #e2e8f0; }
+.video { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; opacity: 0; transform: scale(.985); pointer-events: none; transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out); }
+.showVideo .video { opacity: 1; transform: none; pointer-events: auto; }
+
+.under { display: flex; justify-content: center; gap: 12px; align-items: center; padding: 0 24px 20px; font-size: 12px; color: var(--muted); min-height: 52px; }
+
+/* Sidebar */
+.side { background: var(--panel); border-left: 1px solid var(--line); display: grid; grid-template-rows: 1fr auto; min-height: 0; }
+.scroll { overflow-y: auto; padding: 20px 20px 8px; }
+.section { padding: 4px 0 20px; animation: rise 420ms var(--ease-out) both; }
+.section:nth-child(2) { animation-delay: 50ms; } .section:nth-child(3) { animation-delay: 100ms; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+.label { font-size: 12px; font-weight: 500; color: var(--muted); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; }
+.label output { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* Segmented control with a sliding pill. */
+.seg { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
+.seg button { position: relative; z-index: 1; height: 28px; font-size: 13px; color: var(--muted); border-radius: 6px; transition: color 160ms ease; }
+.seg button[aria-pressed="true"] { color: var(--text); }
+.seg .pill { position: absolute; top: 3px; bottom: 3px; left: 3px; border-radius: 6px; background: var(--raised); box-shadow: 0 0 0 1px var(--line-2), 0 1px 2px rgba(0,0,0,.4); transition: transform 240ms var(--ease-out); }
+
+.pane { display: none; padding-top: 14px; }
+.pane.on { display: block; animation: paneIn 220ms var(--ease-out); }
+@keyframes paneIn { from { opacity: 0; transform: translateY(4px); filter: blur(2px); } }
+
+.swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.sw { position: relative; aspect-ratio: 1; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); transition: transform 160ms var(--ease-out); }
+.sw:active { transform: scale(.94); }
+.sw::after { content: ""; position: absolute; inset: -3px; border-radius: 10px; box-shadow: 0 0 0 2px var(--accent); opacity: 0; transform: scale(.92); transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out); }
+.sw[aria-pressed="true"]::after { opacity: 1; transform: none; }
+.sw.plus { display: grid; place-items: center; background: var(--raised); color: var(--muted); font-size: 18px; overflow: hidden; }
+.sw.plus input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+@media (hover: hover) { .sw:hover { transform: translateY(-1px); } .sw:active { transform: scale(.94); } }
+
+.stops { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.stop { position: relative; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px 0 6px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); flex: 1; font: 12px ui-monospace, Menlo, monospace; color: var(--muted); }
+.stop i { width: 22px; height: 22px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.stop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.swap { width: 28px; height: 28px; border-radius: 7px; color: var(--muted); display: grid; place-items: center; transition: transform 160ms var(--ease-out), color 160ms ease; }
+.swap:hover { color: var(--text); } .swap:active { transform: scale(.92) rotate(180deg); }
+
+.hex { margin-top: 12px; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); }
+.hex i { width: 18px; height: 18px; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.hex input { flex: 1; background: none; border: 0; color: var(--text); font: 12px ui-monospace, Menlo, monospace; outline: none; }
+
+.drop { position: relative; display: grid; place-items: center; gap: 6px; height: 132px; border-radius: var(--r); border: 1px dashed var(--line-2); color: var(--muted); font-size: 13px; text-align: center; transition: border-color 160ms ease, background 160ms ease, transform 200ms var(--ease-out); overflow: hidden; }
+.drop small { color: var(--faint); font-size: 12px; }
+.drop.over { border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.03); transform: scale(1.01); }
+.drop .thumb { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 260ms var(--ease-out); }
+.drop.has .thumb { opacity: 1; }
+.drop.has .cta { position: absolute; bottom: 8px; left: 8px; right: 8px; padding: 6px 10px; border-radius: 7px; background: rgba(10,10,11,.72); backdrop-filter: blur(8px); font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* Sliders */
+.range { position: relative; height: 22px; display: flex; align-items: center; }
+.range input { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; margin: 0; cursor: pointer; }
+.range input::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(to right, #fff var(--p), rgba(255,255,255,.1) var(--p)); }
+.range input::-moz-range-track { height: 4px; border-radius: 4px; background: rgba(255,255,255,.1); }
+.range input::-moz-range-progress { height: 4px; border-radius: 4px; background: #fff; }
+.range input::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.5); transition: transform 140ms var(--ease-out); }
+.range input:active::-webkit-slider-thumb { transform: scale(1.15); }
+.range input::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #fff; }
+.row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.dial { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line-2); position: relative; }
+.dial::after { content: ""; position: absolute; left: 50%; top: 2px; width: 1.5px; height: 7px; margin-left: -.75px; border-radius: 1px; background: #fff; transform-origin: 50% 6px; transform: rotate(var(--a)); }
+
+.switch { position: relative; width: 34px; height: 20px; border-radius: 20px; background: rgba(255,255,255,.12); transition: background 200ms ease; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: transform 220ms var(--ease-out); }
+.switch[aria-checked="true"] { background: #fff; }
+.switch[aria-checked="true"]::after { transform: translateX(14px); background: #0a0a0b; }
+
+/* Footer */
+.foot { border-top: 1px solid var(--line); padding: 16px 20px 20px; display: grid; gap: 12px; background: var(--panel); }
+.dest { font-size: 12px; color: var(--faint); min-height: 16px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn { position: relative; height: 36px; border-radius: 9px; font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 160ms var(--ease-out), background 160ms ease, opacity 160ms ease; }
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.primary { background: #fff; color: #0a0a0b; }
+.btn.ghost { background: var(--raised); box-shadow: inset 0 0 0 1px var(--line-2); }
+.btn .txt { transition: opacity 200ms ease, filter 200ms ease; }
+.btn.swapping .txt { opacity: 0; filter: blur(3px); }
+.dirty { width: 6px; height: 6px; border-radius: 50%; background: #0a0a0b; opacity: 0; transform: scale(.5); transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out); }
+.isDirty .dirty { opacity: .55; transform: none; }
+.spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 600ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
+
+.toast { position: fixed; left: calc((100% - 320px) / 2); bottom: 24px; transform: translate(-50%, 8px); opacity: 0; padding: 9px 14px; border-radius: 10px; background: var(--raised); box-shadow: 0 0 0 1px var(--line-2), 0 10px 30px rgba(0,0,0,.5); font-size: 13px; pointer-events: none; transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); max-width: 60vw; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.toast.err { color: #fca5a5; }
+
+.tabs { display: inline-grid; grid-auto-flow: column; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.tabs button { height: 24px; padding: 0 10px; border-radius: 6px; font-size: 12px; color: var(--muted); transition: background 160ms ease, color 160ms ease; }
+.tabs button[aria-pressed="true"] { background: var(--raised); color: var(--text); }
+.tabs button:disabled { opacity: .35; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-property: opacity, background, color !important; }
+}
+@media (max-width: 760px) { .app { grid-template-columns: 1fr; grid-template-rows: 46vh 1fr; } .side { border-left: 0; border-top: 1px solid var(--line); } .toast { left: 50%; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="main">
+    <div class="top"><b>Screenplay</b><span class="sep">/</span><span id="name"></span></div>
+    <div class="stage"><div class="fit" id="fit">
+      <div class="frame" id="frame">
+        <div class="comp" id="comp">
+          <div class="bg" id="bgA"></div><div class="bg" id="bgB" style="opacity:0"></div>
+          <div class="glow" id="glow"></div>
+          <div class="win" id="win"></div>
+        </div>
+        <video class="video" id="video" controls playsinline></video>
+      </div>
+    </div></div>
+    <div class="under">
+      <div class="tabs"><button id="tabPreview" aria-pressed="true">Preview</button><button id="tabVideo" disabled>Video</button></div>
+      <span id="hint"></span>
+    </div>
+  </div>
+
+  <aside class="side">
+    <div class="scroll">
+      <div class="section">
+        <p class="label">Background</p>
+        <div class="seg" id="bgKind"><span class="pill"></span>
+          <button data-k="gradient">Gradient</button><button data-k="color">Color</button><button data-k="image">Image</button>
+        </div>
+        <div class="pane" data-pane="gradient">
+          <div class="swatches" id="presets"></div>
+          <div class="stops">
+            <label class="stop"><i id="s1i"></i><span id="s1t"></span><input type="color" id="s1"></label>
+            <button class="swap" id="swap" title="Swap colors" aria-label="Swap colors">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5h9.5M9 2l2.5 2.5L9 7M12 9.5H2.5M5 7 2.5 9.5 5 12"/></svg>
+            </button>
+            <label class="stop"><i id="s2i"></i><span id="s2t"></span><input type="color" id="s2"></label>
+          </div>
+          <div style="margin-top:16px">
+            <p class="label"><span>Direction</span><span style="display:flex;gap:8px;align-items:center"><span class="dial" id="dial"></span><output id="angleV"></output></span></p>
+            <div class="range"><input type="range" id="angle" min="0" max="360" step="5"></div>
+          </div>
+        </div>
+        <div class="pane" data-pane="color">
+          <div class="swatches" id="colors"></div>
+          <div class="hex"><i id="hexI"></i><input id="hex" spellcheck="false" maxlength="7" aria-label="Hex color"></div>
+        </div>
+        <div class="pane" data-pane="image">
+          <label class="drop" id="drop">
+            <div class="thumb" id="thumb"></div>
+            <svg class="ic" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2.5"/><path d="m3 14 4.5-4.5 3.5 3.5 2-2 4 4"/><circle cx="13.5" cy="7.5" r="1.25"/></svg>
+            <div class="cta" id="dropText">Drop an image, or click to choose<br><small>PNG, JPEG or WebP</small></div>
+            <input type="file" id="file" accept="image/png,image/jpeg,image/webp">
+          </label>
+        </div>
+      </div>
+
+      <div class="section">
+        <p class="label"><span>Margin</span><output id="padV"></output></p>
+        <div class="range"><input type="range" id="pad" min="0" max="240" step="2"></div>
+        <p class="label" style="margin-top:18px"><span>Corners</span><output id="radV"></output></p>
+        <div class="range"><input type="range" id="rad" min="0" max="48" step="1"></div>
+      </div>
+
+      <div class="section">
+        <div class="row"><span>Shadow</span><button class="switch" id="shadow" role="switch" aria-label="Shadow"></button></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div>
+        <p class="label">Apply to</p>
+        <div class="seg" id="target"><span class="pill"></span><button data-k="scenario">This video</button><button data-k="project">All videos</button></div>
+      </div>
+      <div class="dest" id="dest"></div>
+      <div class="actions">
+        <button class="btn ghost" id="renderBtn"><span class="txt">Render video</span></button>
+        <button class="btn primary" id="saveBtn"><span class="txt">Save</span><span class="dirty"></span></button>
+      </div>
+    </div>
+  </aside>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const $ = (id) => document.getElementById(id);
+const api = (p, o = {}) => fetch(p, { ...o, headers: { "x-token": TOKEN, ...(o.headers || {}) } });
+const COLORS = ["#0a0a0a", "#0f172a", "#1e1b4b", "#18181b", "#f8fafc", "#f5f5f4", "#fef3c7", "#dbeafe", "#ede9fe", "#dcfce7"];
+
+let S;                 // state from the server
+let style;             // what the editor shows: { background, padding, radius, shadow }
+let saved;             // last saved, to know if there are changes
+let target = "scenario";
+let imageRef = null;   // { path, from } of the image background
+let frameUrl = null;
+
+const kindOf = (bg) => typeof bg === "object" ? "gradient" : S.presets[bg] ? "gradient" : /^#/.test(bg) ? "color" : "image";
+
+async function load() {
+  S = await (await api("/api/state")).json();
+  $("name").textContent = S.name;
+  const eff = { ...S.defaults, ...S.projectStyle, ...S.scenarioStyle };
+  style = { background: eff.background, padding: eff.padding, radius: eff.radius, shadow: eff.shadow };
+  if (kindOf(style.background) === "image") imageRef = { path: style.background, from: S.scenarioStyle.background !== undefined ? "scenario" : "project" };
+  saved = JSON.stringify(style);
+  // A video that already has its own look keeps it; otherwise the look is for the whole project.
+  target = Object.keys(S.scenarioStyle).length ? "scenario" : "project";
+  const r = await api("/api/frame");
+  if (r.ok) frameUrl = URL.createObjectURL(await r.blob());
+  $("tabVideo").disabled = !S.hasVideo;
+  $("renderBtn").disabled = !S.hasTake;
+  $("hint").textContent = S.hasTake ? "A frame of your last recording" : "Record the scenario to preview a real frame";
+  buildSwatches();
+  setKind(kindOf(style.background), true);
+  setSeg($("target"), target);
+  draw(true);
+  sync();
+}
+
+/* ---------- composition: the same layout as the renderer ---------- */
+function layout() {
+  const OW = S.output.width, OH = S.output.height, k = OH / 1080;
+  const cap = S.capture || { width: 1440, height: 900 };
+  const pad = style.padding * k, barH = S.frame === "browser" ? Math.round(40 * k) : 0;
+  const s = Math.min((OW - 2 * pad) / cap.width, (OH - 2 * pad - barH) / cap.height);
+  const cw = Math.round(cap.width * s), ch = Math.round(cap.height * s);
+  return { OW, OH, k, barH, x: Math.round((OW - cw) / 2), y: Math.round((OH - ch - barH) / 2), w: cw, h: ch + barH, ch };
+}
+
+function fitStage() {
+  const L = layout(), box = $("fit").getBoundingClientRect();
+  const sc = Math.min(box.width / L.OW, box.height / L.OH);
+  $("frame").style.width = L.OW * sc + "px"; $("frame").style.height = L.OH * sc + "px";
+  $("comp").style.width = L.OW + "px"; $("comp").style.height = L.OH + "px";
+  $("comp").style.transform = `scale(${sc})`;
+}
+
+function bgCss(bg) {
+  if (typeof bg === "object") return `linear-gradient(${bg.angle ?? 135}deg, ${bg.gradient.join(", ")})`;
+  const p = S.presets[bg];
+  if (p) return `linear-gradient(${p.angle}deg, ${p.stops.join(", ")})`;
+  if (/^#/.test(bg)) return bg;
+  if (imageRef) return `url("/api/image?t=${TOKEN}&from=${imageRef.from}&path=${encodeURIComponent(imageRef.path)}")`;
+  return "#111";
+}
+
+let front = "bgA", lastBg = "";
+function draw(initial) {
+  const L = layout(), win = $("win");
+  const css = bgCss(style.background);
+  if (css !== lastBg) {
+    // Crossfade: the new background fades in over the old one.
+    const back = front === "bgA" ? "bgB" : "bgA";
+    $(back).style.background = css; $(back).style.backgroundSize = "cover"; $(back).style.backgroundPosition = "center";
+    if (initial) { $(back).style.transition = "none"; requestAnimationFrame(() => $(back).style.transition = ""); }
+    $(back).style.opacity = 1; $(front).style.opacity = 0; front = back; lastBg = css;
+  }
+  $("glow").style.opacity = kindOf(style.background) === "gradient" ? 1 : 0;
+  Object.assign(win.style, { left: L.x + "px", top: L.y + "px", width: L.w + "px", height: L.h + "px", borderRadius: style.radius * L.k + "px",
+    boxShadow: style.shadow ? `0 ${24 * L.k}px ${60 * L.k}px rgba(0,0,0,.35), 0 ${2 * L.k}px ${8 * L.k}px rgba(0,0,0,.18)` : "none" });
+  if (!win.dataset.built) {
+    win.dataset.built = 1;
+    let html = "";
+    if (L.barH) html += `<div class="bar" id="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i>${S.url ? `<span>${new URL(S.url).host}</span>` : ""}</div>`;
+    html += frameUrl ? `<img id="shot" src="${frameUrl}" alt="">` :
+      `<div class="placeholder" id="shot"><div style="left:6%;top:9%;width:22%;height:6%"></div><div style="left:6%;top:22%;width:58%;height:30%"></div><div style="left:68%;top:22%;width:26%;height:30%"></div><div style="left:6%;top:58%;width:88%;height:26%"></div></div>`;
+    win.innerHTML = html;
+  }
+  const bar = $("bar"); if (bar) bar.style.height = L.barH + "px";
+  const shot = $("shot"); shot.style.top = L.barH + "px"; shot.style.height = L.ch + "px";
+  fitStage();
+}
+
+/* ---------- controls ---------- */
+function setSeg(el, k) {
+  const btns = [...el.querySelectorAll("button")];
+  const i = Math.max(0, btns.findIndex((b) => b.dataset.k === k));
+  btns.forEach((b, j) => b.setAttribute("aria-pressed", String(i === j)));
+  const pill = el.querySelector(".pill");
+  pill.style.width = `calc((100% - 6px) / ${btns.length})`;
+  pill.style.transform = `translateX(${i * 100}%)`;
+}
+
+function setKind(k, initial) {
+  setSeg($("bgKind"), k);
+  document.querySelectorAll(".pane").forEach((p) => p.classList.toggle("on", p.dataset.pane === k));
+  if (initial) return;
+  const cur = style.background, curKind = kindOf(cur);
+  if (k === curKind) return;
+  if (k === "gradient") style.background = lastGradient || "ocean";
+  if (k === "color") style.background = lastColor || "#0f172a";
+  if (k === "image") { if (imageRef) style.background = imageRef.path; else { sync(); return; } }
+  change();
+}
+let lastGradient = null, lastColor = null;
+
+function buildSwatches() {
+  const pre = $("presets");
+  for (const [name, p] of Object.entries(S.presets)) {
+    const b = document.createElement("button");
+    b.className = "sw"; b.dataset.v = name; b.title = name; b.setAttribute("aria-label", name);
+    b.style.background = `linear-gradient(${p.angle}deg, ${p.stops.join(", ")})`;
+    b.onclick = () => { style.background = name; change(); };
+    pre.appendChild(b);
+  }
+  const custom = document.createElement("button");
+  custom.className = "sw"; custom.id = "customGrad"; custom.title = "Your gradient"; custom.setAttribute("aria-label", "Your gradient");
+  custom.onclick = () => { style.background = customGradient(); change(); };
+  pre.appendChild(custom);
+  const col = $("colors");
+  for (const c of COLORS) {
+    const b = document.createElement("button");
+    b.className = "sw"; b.dataset.v = c; b.title = c; b.setAttribute("aria-label", c); b.style.background = c;
+    b.onclick = () => { style.background = c; change(); };
+    col.appendChild(b);
+  }
+}
+
+function currentStops() {
+  const bg = style.background;
+  if (typeof bg === "object") return { stops: bg.gradient, angle: bg.angle ?? 135 };
+  const p = S.presets[bg] || S.presets.ocean;
+  return { stops: [p.stops[0], p.stops[p.stops.length - 1]], angle: p.angle };
+}
+function customGradient() {
+  if (typeof style.background === "object") return style.background;
+  const c = currentStops();
+  return { gradient: [c.stops[0], c.stops[c.stops.length - 1]], angle: c.angle };
+}
+function setGradient(fn) {
+  const g = customGradient();
+  style.background = fn({ gradient: [...g.gradient], angle: g.angle ?? 135 });
+  change();
+}
+
+$("s1").oninput = (e) => setGradient((g) => (g.gradient[0] = e.target.value, g));
+$("s2").oninput = (e) => setGradient((g) => (g.gradient[g.gradient.length - 1] = e.target.value, g));
+$("swap").onclick = () => setGradient((g) => (g.gradient.reverse(), g));
+$("angle").oninput = (e) => { live(); setGradient((g) => (g.angle = +e.target.value, g)); };
+$("hex").onchange = (e) => { const v = e.target.value.trim(); if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) { style.background = v.toLowerCase(); change(); } else sync(); };
+$("pad").oninput = (e) => { live(); style.padding = +e.target.value; change(); };
+$("rad").oninput = (e) => { live(); style.radius = +e.target.value; change(); };
+$("shadow").onclick = () => { style.shadow = !style.shadow; change(); };
+$("bgKind").querySelectorAll("button").forEach((b) => (b.onclick = () => setKind(b.dataset.k)));
+$("target").querySelectorAll("button").forEach((b) => (b.onclick = () => { target = b.dataset.k; setSeg($("target"), target); sync(); }));
+
+// While a slider moves, the preview follows it directly; transitions come back once it stops.
+let liveT;
+function live() { document.body.classList.add("live"); clearTimeout(liveT); liveT = setTimeout(() => document.body.classList.remove("live"), 120); }
+
+/* custom color tile in the color pane */
+(function addColorPicker() {
+  const t = setInterval(() => {
+    if (!S) return; clearInterval(t);
+    const b = document.createElement("label");
+    b.className = "sw plus"; b.title = "Pick a color"; b.innerHTML = '+<input type="color" aria-label="Pick a color">';
+    b.querySelector("input").oninput = (e) => { style.background = e.target.value; change(); };
+    $("colors").appendChild(b);
+  }, 30);
+})();
+
+/* image: click, or drop anywhere */
+async function upload(file) {
+  if (!file || !/^image\/(png|jpeg|webp)$/.test(file.type)) return toast("Use a PNG, JPEG or WebP image", true);
+  $("drop").classList.add("over");
+  const r = await api("/api/upload", { method: "POST", headers: { "x-filename": file.name }, body: file });
+  $("drop").classList.remove("over");
+  const j = await r.json();
+  if (!r.ok) return toast(j.error || "Upload failed", true);
+  imageRef = { path: j.path, from: "scenario" };
+  style.background = j.path;
+  setKind("image", true);
+  change();
+}
+$("file").onchange = (e) => upload(e.target.files[0]);
+["dragenter", "dragover"].forEach((ev) => addEventListener(ev, (e) => { e.preventDefault(); $("drop").classList.add("over"); if (kindOf(style.background) !== "image") setKind("image", true); }));
+["dragleave", "drop"].forEach((ev) => addEventListener(ev, (e) => { e.preventDefault(); if (ev === "drop" || !e.relatedTarget) $("drop").classList.remove("over"); }));
+addEventListener("drop", (e) => upload(e.dataTransfer.files[0]));
+
+function change() { draw(); sync(); }
+
+/* reflect the style in the controls */
+function sync() {
+  const bg = style.background, k = kindOf(bg);
+  if (k === "gradient") lastGradient = bg;
+  if (k === "color") lastColor = bg;
+  document.querySelectorAll("#presets .sw").forEach((b) => b.setAttribute("aria-pressed", String(typeof bg === "string" && b.dataset.v === bg)));
+  const cg = customGradient();
+  $("customGrad").style.background = `linear-gradient(${cg.angle ?? 135}deg, ${cg.gradient.join(", ")})`;
+  $("customGrad").setAttribute("aria-pressed", String(typeof bg === "object"));
+  const c = currentStops(), a = c.stops[0], z = c.stops[c.stops.length - 1];
+  $("s1").value = a; $("s1i").style.background = a; $("s1t").textContent = a;
+  $("s2").value = z; $("s2i").style.background = z; $("s2t").textContent = z;
+  $("angle").value = c.angle; $("angleV").textContent = c.angle + "°"; $("dial").style.setProperty("--a", c.angle + "deg");
+  document.querySelectorAll("#colors .sw[data-v]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === bg)));
+  const hex = k === "color" ? bg : (lastColor || "#0f172a");
+  if (document.activeElement !== $("hex")) $("hex").value = hex;
+  $("hexI").style.background = hex;
+  const drop = $("drop");
+  drop.classList.toggle("has", Boolean(imageRef));
+  if (imageRef) { $("thumb").style.backgroundImage = bgCss(imageRef.path); $("dropText").textContent = imageRef.path.split(/[\\/]/).pop(); }
+  for (const [id, v, unit] of [["pad", style.padding, ""], ["rad", style.radius, ""]]) {
+    const el = $(id); el.value = v; el.style.setProperty("--p", (100 * (v - el.min)) / (el.max - el.min) + "%");
+    $(id + "V").textContent = v + unit;
+  }
+  $("shadow").setAttribute("aria-checked", String(style.shadow));
+  const file = target === "project" ? S.configFile : S.scenarioFile;
+  $("dest").textContent = (target === "project" ? (S.configExists ? "Saves to " : "Creates ") : "Saves to ") + file.split(/[\\/]/).pop() + (target === "project" ? " · used by every video in this folder" : "");
+  document.body.classList.toggle("isDirty", JSON.stringify(style) !== saved);
+  $("saveBtn").classList.toggle("isDirty", JSON.stringify(style) !== saved);
+}
+
+/* ---------- save, render ---------- */
+async function swapText(btn, html) {
+  btn.classList.add("swapping");
+  await new Promise((r) => setTimeout(r, 120));
+  btn.querySelector(".txt").innerHTML = html;
+  btn.classList.remove("swapping");
+}
+
+async function save() {
+  const btn = $("saveBtn");
+  btn.disabled = true;
+  const r = await api("/api/save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ target, style }) });
+  const j = await r.json();
+  btn.disabled = false;
+  if (!r.ok) return toast(j.error || "Could not save", true);
+  S = { ...S, ...j.state };
+  saved = JSON.stringify(style);
+  sync();
+  await swapText(btn, "Saved");
+  setTimeout(() => swapText(btn, "Save"), 1400);
+  return true;
+}
+$("saveBtn").onclick = save;
+addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); save(); } });
+
+$("renderBtn").onclick = async () => {
+  const btn = $("renderBtn");
+  if (JSON.stringify(style) !== saved && !(await save())) return;
+  btn.disabled = true;
+  await swapText(btn, '<span class="spin"></span>Rendering…');
+  const r = await api("/api/render", { method: "POST" });
+  const j = await r.json();
+  btn.disabled = false;
+  await swapText(btn, "Render video");
+  if (!r.ok) return toast(j.error || "Render failed", true);
+  $("video").src = `/api/video?t=${TOKEN}&v=${j.at}`;
+  $("tabVideo").disabled = false;
+  showVideo(true);
+  $("video").play().catch(() => {});
+  toast(`Video ready · ${j.duration.toFixed(1)}s`);
+};
+
+function showVideo(on) {
+  $("frame").classList.toggle("showVideo", on);
+  $("tabPreview").setAttribute("aria-pressed", String(!on));
+  $("tabVideo").setAttribute("aria-pressed", String(on));
+  if (!on) $("video").pause();
+  else if (!$("video").src) $("video").src = `/api/video?t=${TOKEN}`;
+}
+$("tabPreview").onclick = () => showVideo(false);
+$("tabVideo").onclick = () => showVideo(true);
+document.addEventListener("input", () => showVideo(false), true);
+document.addEventListener("click", (e) => { if (e.target.closest(".side") && !e.target.closest(".foot")) showVideo(false); }, true);
+
+let toastT;
+function toast(msg, err) {
+  const t = $("toast");
+  t.textContent = msg; t.classList.toggle("err", Boolean(err)); t.classList.add("on");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2600);
+}
+
+addEventListener("resize", fitStage);
+addEventListener("beforeunload", (e) => { if (S && JSON.stringify(style) !== saved) { e.preventDefault(); e.returnValue = ""; } });
+load().catch((e) => toast(String(e.message || e), true));
+</script>
+</body>
+</html>

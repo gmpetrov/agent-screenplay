@@ -34,7 +34,10 @@ export async function resolveStyle(style: Style | undefined, baseDir: string): P
   const bg = s.background ?? "ocean";
   let background: ResolvedStyle["background"];
   let dark = true;
-  if (PRESETS[bg]) {
+  if (typeof bg === "object") {
+    background = { kind: "gradient", stops: bg.gradient, angle: bg.angle ?? 135 };
+    dark = bg.gradient.filter(isDarkColor).length * 2 >= bg.gradient.length;
+  } else if (PRESETS[bg]) {
     background = { kind: "gradient", stops: PRESETS[bg].stops, angle: PRESETS[bg].angle };
     dark = PRESETS[bg].dark;
   } else if (/^(#|rgb|hsl)/i.test(bg)) {
@@ -63,10 +66,11 @@ export async function resolveStyle(style: Style | undefined, baseDir: string): P
   };
 }
 
-function isDarkColor(c: string): boolean {
-  const m = /^#([0-9a-f]{6})$/i.exec(c);
-  if (!m) return true;
-  const n = parseInt(m[1], 16);
+export function isDarkColor(c: string): boolean {
+  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(c);
+  const hex = short ? short.slice(1).map((d) => d + d).join("") : /^#([0-9a-f]{6})$/i.exec(c)?.[1];
+  if (!hex) return true;
+  const n = parseInt(hex, 16);
   const r = (n >> 16) & 255,
     g = (n >> 8) & 255,
     b = n & 255;
