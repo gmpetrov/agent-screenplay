@@ -1,6 +1,6 @@
 {
   "name": "agent-screenplay",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Screen Studio-quality screen recordings for AI agents: write a scenario, Screenplay films it and edits it (smooth cursor, auto-zoom, callouts, voice-over).",
   "license": "MIT",
   "type": "module",
