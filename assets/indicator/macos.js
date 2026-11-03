@@ -1,6 +1,7 @@
 // The pill that tells the person at the Mac that Screenplay is driving it (and filming).
 // Run with `osascript -l JavaScript macos.js <label> <parent pid> [selftest]`.
-// It is left out of screen captures (NSWindowSharingNone), stays on top on every Space,
+// It is left out of screen captures (NSWindowSharingNone: Screenplay films with screencapture,
+// which honours it; ScreenCaptureKit, and so ffmpeg, films it anyway), stays on top on every Space,
 // never takes focus, and survives "Hide others". Stop exits with code 3; the pill also
 // quits by itself when the Screenplay process that started it is gone.
 ObjC.import("Cocoa");

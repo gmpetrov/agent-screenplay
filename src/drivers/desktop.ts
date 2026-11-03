@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { execFile, spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { execFile, spawn, spawnSync, type ChildProcess, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { promisify } from "node:util";
 import type { LoadedScenario } from "../scenario/load.js";
 import { describeStep, stepKind, SURFACES, type Step } from "../scenario/schema.js";
 import { parseTarget } from "../scenario/target.js";
 import type { Box, Point, Take, TakeStep } from "../take.js";
-import { captureFfmpegPath } from "../ffmpeg.js";
+import { captureFfmpegPath, ffmpegPath } from "../ffmpeg.js";
 import { cardDuration, travelDuration, typingDelays } from "./pace.js";
 import { showIndicator, type Indicator } from "./indicator.js";
 import { StepError, sleep, type CheckReport, type CheckStepResult } from "./web.js";
@@ -17,8 +17,8 @@ const require = createRequire(import.meta.url);
 
 /**
  * Desktop apps: agent-desktop plays the steps through the OS accessibility
- * APIs (no real pointer moves), ffmpeg films the window without the system
- * cursor, and the shared editing step draws the cursor and zooms.
+ * APIs (no real pointer moves), screencapture (macOS) or ffmpeg films the
+ * window without the system cursor, and the shared editing step draws the cursor and zooms.
  */
 
 export interface DesktopRunOptions {
@@ -396,17 +396,68 @@ export function normalizeCombo(combo: string): string {
     .join("+");
 }
 
-/** Films a screen region with ffmpeg, without the system cursor. */
-class Recorder {
+/**
+ * Films a screen region without the system cursor. On macOS it uses `screencapture -v`, which
+ * leaves out windows marked as not shared (the recording pill): ffmpeg's capture goes through
+ * ScreenCaptureKit on recent macOS, which films them anyway. ffmpeg films on Windows and Linux,
+ * and on a Mac whose screencapture cannot record video.
+ */
+export class Recorder {
   private proc?: ChildProcessWithoutNullStreams;
+  private mac?: { proc: ChildProcess; spawnedAt: number };
+  private t0 = 0;
+  /** The video file, once filming has started. */
+  file = "";
   startedAt = 0;
   readonly fps = 30;
   crop = { x: 0, y: 0, width: 0, height: 0 };
 
-  constructor(private file: string) {}
+  constructor(private dir: string) {}
 
   async start(area: Bounds, scale: number, t0: number) {
+    this.t0 = t0;
+    if (process.platform === "darwin" && (await this.startScreencapture(area, scale))) return;
+    await this.startFfmpeg(area, scale);
+  }
+
+  /** Starts `screencapture -v` on the area; false when it cannot record (it quit at once). */
+  private async startScreencapture(area: Bounds, scale: number): Promise<boolean> {
+    const file = path.join(this.dir, "capture.mov");
+    const spawnedAt = Date.now() / 1000 - this.t0;
+    let proc: ChildProcess;
+    try {
+      // The whole main screen, cropped when editing: with -R (a region) it films the system cursor too.
+      proc = spawn("screencapture", ["-x", "-v", "-D", "1", file], { stdio: "ignore" });
+    } catch {
+      return false;
+    }
+    // It prints nothing when it starts: if it is still running after a moment, it is filming.
+    const quit = await new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => resolve(false), 700);
+      proc.once("error", () => (clearTimeout(timer), resolve(true)));
+      proc.once("exit", () => (clearTimeout(timer), resolve(true)));
+    });
+    if (quit) {
+      fs.rmSync(file, { force: true });
+      return false;
+    }
+    this.file = file;
+    this.mac = { proc, spawnedAt };
+    // Its first frame comes about 0.15 s after it starts; stop() measures it from the video's length.
+    this.startedAt = spawnedAt + 0.15;
+    this.crop = {
+      x: Math.round(area.x * scale),
+      y: Math.round(area.y * scale),
+      width: Math.round(area.width * scale) & ~1,
+      height: Math.round(area.height * scale) & ~1,
+    };
+    return true;
+  }
+
+  private async startFfmpeg(area: Bounds, scale: number) {
     const bin = captureFfmpegPath();
+    const t0 = this.t0;
+    this.file = path.join(this.dir, "capture.mp4");
     const W = Math.round(area.width * scale) & ~1;
     const H = Math.round(area.height * scale) & ~1;
     let input: string[];
@@ -464,14 +515,51 @@ class Recorder {
   }
 
   async stop() {
+    if (this.mac) return this.stopScreencapture();
     if (!this.proc) return;
     const p = this.proc;
+    this.proc = undefined;
     await new Promise<void>((resolve) => {
       p.on("close", () => resolve());
       p.stdin.write("q");
       setTimeout(() => p.kill("SIGINT"), 5000);
     });
   }
+
+  private async stopScreencapture() {
+    const { proc, spawnedAt } = this.mac!;
+    this.mac = undefined;
+    const stoppedAt = Date.now() / 1000 - this.t0;
+    await new Promise<void>((resolve) => {
+      if (proc.exitCode !== null || proc.signalCode !== null) return resolve();
+      proc.once("exit", () => resolve());
+      proc.kill("SIGINT");
+      setTimeout(() => proc.kill("SIGKILL"), 30_000);
+    });
+    const info = probeVideo(this.file);
+    if (!info) throw new Error("Screen capture produced no video: check that your terminal may record the screen in System Settings → Privacy & Security → Screen Recording.");
+    // screencapture films until it is stopped, so the video ends when stop() was asked.
+    this.startedAt = Math.max(spawnedAt, stoppedAt - info.duration);
+    // Keep the crop inside the video (a window can stick out of the screen).
+    const c = this.crop;
+    const x = Math.max(0, Math.min(c.x, info.width - 2));
+    const y = Math.max(0, Math.min(c.y, info.height - 2));
+    this.crop = { x, y, width: Math.min(c.width, info.width - x) & ~1, height: Math.min(c.height, info.height - y) & ~1 };
+  }
+}
+
+/** Length and size of a video file, read from ffmpeg's description of it. */
+export function parseVideoInfo(text: string): { duration: number; width: number; height: number } | undefined {
+  const d = /Duration: (\d+):(\d+):(\d+(?:\.\d+)?)/.exec(text);
+  const s = /Stream #[^\n]*Video:[^\n]*?, (\d{2,5})x(\d{2,5})/.exec(text);
+  if (!d || !s) return undefined;
+  return { duration: Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3]), width: Number(s[1]), height: Number(s[2]) };
+}
+
+function probeVideo(file: string) {
+  if (!fs.existsSync(file)) return undefined;
+  const r = spawnSync(ffmpegPath(), ["-hide_banner", "-i", file], { encoding: "utf8" });
+  return parseVideoInfo(r.stderr ?? "");
 }
 
 function macScreenIndex(bin: string): string {
@@ -525,7 +613,7 @@ async function play(
     const W = ds.frame.width;
     const H = ds.frame.height;
     if (record) {
-      recorder = new Recorder(path.join(takeDir, "capture.mp4"));
+      recorder = new Recorder(takeDir);
       await recorder.start(ds.frame, ds.scale, t0);
       await sleepIf(0.6);
     }
@@ -742,7 +830,7 @@ async function play(
       scale: ds.scale,
       duration,
       cursorStart,
-      source: { kind: "video", file: "capture.mp4", fps: rec.fps, offset: rec.startedAt, crop: rec.crop },
+      source: { kind: "video", file: path.basename(rec.file), fps: rec.fps, offset: rec.startedAt, crop: rec.crop },
       steps,
     };
     return { take };
