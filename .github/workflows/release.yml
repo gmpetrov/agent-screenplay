@@ -1,0 +1,59 @@
+name: Release
+# Publishes to npm when a version tag (v1.2.3) is pushed on a commit of main,
+# then creates the GitHub release with notes generated from the merged pull requests.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # the GitHub release
+  id-token: write # npm trusted publishing and provenance
+
+concurrency: release
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@latest
+
+      - name: Check the tag
+        id: check
+        run: |
+          V="${GITHUB_REF_NAME#v}"
+          P=$(node -p "require('./package.json').version")
+          S=$(node -p "require('fs').readFileSync('src/version.ts','utf8').match(/\"(.+)\"/)[1]")
+          [ "$V" = "$P" ] || { echo "::error::Tag $GITHUB_REF_NAME, but package.json says $P"; exit 1; }
+          [ "$V" = "$S" ] || { echo "::error::Tag $GITHUB_REF_NAME, but src/version.ts says $S"; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          # A version with a suffix (0.2.0-beta.1) goes to the "next" dist-tag, not "latest".
+          case "$V" in *-*) echo "npmtag=next" >> "$GITHUB_OUTPUT"; echo "pre=--prerelease" >> "$GITHUB_OUTPUT";; *) echo "npmtag=latest" >> "$GITHUB_OUTPUT";; esac
+          if npm view "agent-screenplay@$V" version >/dev/null 2>&1; then echo "published=true" >> "$GITHUB_OUTPUT"; fi
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+      - name: Publish to npm
+        if: steps.check.outputs.published != 'true'
+        run: npm publish --access public --provenance --tag "${{ steps.check.outputs.npmtag }}"
+        env:
+          # Unused once the package trusts this workflow on npmjs.com (trusted publishing).
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: GitHub release
+        run: gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes ${{ steps.check.outputs.pre }}
+        env:
+          GH_TOKEN: ${{ github.token }}
