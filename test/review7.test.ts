@@ -55,7 +55,9 @@ it("does not resolve the narration of cards that are off", async () => {
   await expect(narrate(on)).rejects.toThrow(/does not exist/);
 });
 
-it("does not take a usable page with a Turnstile widget for a bot check", async () => {
+// Browser tests do not run on Windows CI, where a launched browser never answers (see login.test.ts);
+// web recording is tested on Linux.
+it.skipIf(process.platform === "win32")("does not take a usable page with a Turnstile widget for a bot check", async () => {
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
