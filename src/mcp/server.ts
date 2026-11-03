@@ -126,7 +126,21 @@ export async function startMcpServer() {
           const r = await record(file, { gif, noVoice, log: progressLogger(extra as Extra) });
           return {
             content: [
-              { type: "text", text: JSON.stringify({ mp4: r.mp4, gif: r.gif, storyboard: r.storyboard, duration: Number(r.duration.toFixed(1)), steps: r.steps }, null, 2) },
+              {
+                type: "text",
+                text: JSON.stringify(
+                  {
+                    mp4: r.mp4,
+                    gif: r.gif,
+                    storyboard: r.storyboard,
+                    duration: Number(r.duration.toFixed(1)),
+                    steps: r.steps,
+                    next: `When you hand the video over, offer the person to adjust its look by eye: npx agent-screenplay style ${file}`,
+                  },
+                  null,
+                  2,
+                ),
+              },
               await imageContent(r.storyboard),
             ],
           };

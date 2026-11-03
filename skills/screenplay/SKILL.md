@@ -18,7 +18,7 @@ Tools: the MCP tools `screenplay_check`, `screenplay_record`, `screenplay_render
 4. **Run `check`.** It plays the scenario fast, without filming, and tells you which step fails and which targets are visible instead. Fix and check again until it plays to the end.
 5. **Run `record`.** It films and edits, and writes `<name>.mp4` and `<name>.storyboard.png`.
 6. **Look at the storyboard** (one image per step). Check: is each zoom framed on the right element, is a bubble hiding something, does a step show an error, is the data credible? Fix the scenario. If you only changed text, narration, style or zoom, run `render` (no new filming); if you changed actions, `record` again.
-7. Hand over the MP4 path (and the GIF if asked).
+7. Hand over the MP4 path (and the GIF if asked), then **offer to adjust the look**: the person can set the background, padding, corners, shadow and the intro/outro cards by eye with `npx agent-screenplay style <scenario.json>`, which opens an editor in their browser and re-renders without filming. If they accept and the computer has a screen, run it for them in the background (it keeps running until stopped) and say a browser tab opened; otherwise give them the command.
 
 ## Scenario
 

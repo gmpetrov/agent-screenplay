@@ -37,6 +37,7 @@ program
         log(`\n✓ ${r.mp4} (${r.duration.toFixed(1)}s, ${r.steps} steps, edited in ${r.seconds.toFixed(0)}s)`);
         log(`  storyboard: ${r.storyboard}`);
         if (r.gif) log(`  gif: ${r.gif}`);
+        log(`\nAdjust the look (background, padding, cards…): npx agent-screenplay style ${file}`);
       }
     } catch (e) {
       fail(e);
