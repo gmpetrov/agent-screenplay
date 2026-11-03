@@ -51,6 +51,8 @@ Tools: the MCP tools `screenplay_check`, `screenplay_record`, `screenplay_render
 
 Everything on screen is filmed: notifications, other windows, desktop icons and widgets. Before recording, close what should not be seen, turn on Do Not Disturb, and set `"hideOthers": true` (macOS) to hide the other apps. Some windows (menu bar apps' panels) ignore Hide Others: close them. Prefer a window recording when the video stays in one app.
 
+During a desktop check or recording, a pill at the top of the screen (not in the video) tells the person Screenplay is at the controls, with a Stop button. If a run fails with "Stopped: the person at the computer pressed Stop", do not run it again on your own: ask the person when to go on.
+
 ```json
 {
   "screen": true,

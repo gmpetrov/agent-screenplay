@@ -128,6 +128,8 @@ Use `"app": "<name>"` instead of `"url"`. The steps are played through the opera
 
 Desktop recordings need a real screen: they cannot run in a headless container. Websites can.
 
+While Screenplay drives the computer, a pill at the top of the screen says so ("Screenplay is recording", or "rehearsing" during a check), with a **Stop** button that ends the run at once. The pill is left out of the capture, so it is never in the video. macOS and Windows; `SCREENPLAY_INDICATOR=0` turns it off.
+
 ### The whole screen
 
 `"screen": true` films the whole main screen instead of one window, for videos that go from one app to another or use the menu bar. `{ "open": "<app>" }` launches an app or brings it to the front, a step's `"app"` acts in another app, and `"surface": "menubar"` (or `menu`, `sheet`, `popover`, `alert`) finds elements outside the app's window. Everything on screen is filmed, desktop icons and notifications included: tidy the screen first; on macOS `"hideOthers": true` hides the other apps.
