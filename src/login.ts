@@ -72,7 +72,8 @@ export async function login(url: string, out: string, log: (msg: string) => void
   await finished;
   clearInterval(poll);
   await save();
-  await browser.close().catch(() => {});
+  // Closing the browser must not keep the command waiting: the session is already saved.
+  await Promise.race([browser.close().catch(() => {}), new Promise((r) => setTimeout(r, 5000))]);
   if (!saved || !fs.existsSync(file)) throw new Error("No session was captured.");
   return file;
 }
