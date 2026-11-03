@@ -23,8 +23,6 @@ export async function login(url: string, out: string, log: (msg: string) => void
   const browser = await launchBrowser({ headless: false });
   const context = await browser.newContext({ viewport: null });
   const page = await context.newPage();
-  await page.goto(url).catch(() => {});
-  log("In the browser window: sign in, or pass the check if the site asks for one. Then close the window (or press Enter here).");
 
   let saved = false;
   const save = async () => {
@@ -37,35 +35,41 @@ export async function login(url: string, out: string, log: (msg: string) => void
       /* the window is closing: keep the last saved state */
     }
   };
+
+  // Watch for the end before anything else, so a window closed early still ends the command.
+  let rl: readline.Interface | undefined;
+  let finish!: () => void;
+  const finished = new Promise<void>((resolve) => (finish = resolve));
+  const done = () => {
+    rl?.close();
+    finish();
+  };
+  // Enter in the terminal, when there is a person at it.
+  if (process.stdin.isTTY) {
+    rl = readline.createInterface({ input: process.stdin });
+    rl.once("line", done);
+  }
+  // Closing the window: on macOS the browser keeps running with no window, so watch the pages too.
+  browser.once("disconnected", done);
+  context.on("close", done);
+  const watch = (p: typeof page) => {
+    // Save as soon as a page loads (the check passed, the sign-in redirected), not only on the timer.
+    p.on("load", () => void save());
+    p.once("close", () => {
+      if (context.pages().length === 0) done();
+    });
+  };
+  watch(page);
+  context.on("page", watch);
+  process.once("SIGINT", done);
+  process.once("SIGTERM", done);
+
+  await page.goto(url).catch(() => {});
+  log("In the browser window: sign in, or pass the check if the site asks for one. Then close the window (or press Enter here).");
   await save();
   const poll = setInterval(save, 2000);
-
-  await new Promise<void>((resolve) => {
-    let rl: readline.Interface | undefined;
-    const done = () => {
-      rl?.close();
-      resolve();
-    };
-    // Enter in the terminal, when there is a person at it.
-    if (process.stdin.isTTY) {
-      rl = readline.createInterface({ input: process.stdin });
-      rl.once("line", done);
-    }
-    // Closing the window: on macOS the browser keeps running with no window, so watch the pages too.
-    browser.once("disconnected", done);
-    context.on("close", done);
-    const watch = (p: typeof page) => {
-      // Save as soon as a page loads (the check passed, the sign-in redirected), not only on the timer.
-      p.on("load", () => void save());
-      p.once("close", () => {
-        if (context.pages().length === 0) done();
-      });
-    };
-    watch(page);
-    context.on("page", watch);
-    process.once("SIGINT", done);
-    process.once("SIGTERM", done);
-  });
+  if (context.pages().length === 0) done();
+  await finished;
   clearInterval(poll);
   await save();
   await browser.close().catch(() => {});

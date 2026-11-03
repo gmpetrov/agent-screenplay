@@ -11,24 +11,31 @@ describe("login", () => {
     // The browser here is headless, but login checks for a screen first (Linux CI has none).
     vi.stubEnv("DISPLAY", process.env.DISPLAY || ":99");
     const real = await import("../src/drivers/browser.js");
-    let opened: Browser | undefined;
+    // The browser can take several seconds to start on CI machines: wait for it, not for a fixed time.
+    let launched!: (b: Browser) => void;
+    const ready = new Promise<Browser>((r) => (launched = r));
     vi.doMock("../src/drivers/browser.js", () => ({
       ...real,
-      launchBrowser: async () => (opened = await real.launchBrowser({ headless: true })),
+      launchBrowser: async () => {
+        const b = await real.launchBrowser({ headless: true });
+        launched(b);
+        return b;
+      },
     }));
     const { login } = await import("../src/login.js");
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sp-login-"));
     const out = path.join(dir, "auth.json");
     const page = `data:text/html,<script>document.cookie="seen=1";localStorage.setItem("k","v")</script>ok`;
     const done = login(page, out);
-    // Wait for the window, then close it like a person would.
-    for (let i = 0; i < 50 && !opened?.contexts()[0]?.pages().length; i++) await new Promise((r) => setTimeout(r, 100));
-    await new Promise((r) => setTimeout(r, 500));
-    await opened!.contexts()[0].pages()[0].close();
+    const opened = await Promise.race([ready, done.then(() => Promise.reject(new Error("login ended before its window opened")))]);
+    while (!opened.contexts()[0]?.pages().length) await new Promise((r) => setTimeout(r, 50));
+    // Close the window like a person would.
+    await opened.contexts()[0].pages()[0].close();
     expect(await done).toBe(out);
+    // Closed even before the page had loaded: still saved, and the command still ends.
     expect(JSON.parse(fs.readFileSync(out, "utf8"))).toHaveProperty("cookies");
     fs.rmSync(dir, { recursive: true, force: true });
     vi.doUnmock("../src/drivers/browser.js");
     vi.unstubAllEnvs();
-  }, 30_000);
+  }, 90_000);
 });
