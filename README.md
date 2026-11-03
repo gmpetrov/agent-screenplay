@@ -45,7 +45,7 @@ Requirements: Node 20+. ffmpeg and the drawing library ship with the package.
 ```json
 {
   "url": "https://app.example.com/inbox",
-  "style": { "background": "aurora" },
+  "style": { "background": "dawn" },
   "steps": [
     { "title": "Human handoff, in one click", "subtitle": "New in 2.4" },
     { "click": "text=Camille Laurent", "say": "When the AI agent gets stuck, the conversation lands in your inbox." },
@@ -62,7 +62,7 @@ Requirements: Node 20+. ffmpeg and the drawing library ship with the package.
 - **Targets** name elements the way people see them: `text=…`, `role=button[name='…']`, `label=…`, `placeholder=…`, `testid=…`, `css=…` (web only), `at=x,y` (desktop apps without accessible elements only).
 - **Actions**: `goto`, `click`, `type`, `press`, `hover`, `scroll`, `select`, `wait`, `pause`.
 - **Direction**: `title` and `end` cards, `callout` (a bubble pointing at an element), `highlight` (spotlight), `zoomTo`, and on any step `say` (caption and voice), `zoom`, `hold`.
-- **Style**: background preset (mesh gradients: `aurora`, `sky`, `dusk`, `ember`, `graphite`, `lagoon`, `lilac`, `peach`, `linen`), your own gradient, a color or an image; padding, corner radius, shadow, cursor style, maximum zoom, browser frame, accent color. See [Style](#style).
+- **Style**: background preset (soft light gradients: `dawn`, `iris`, `citrus`, `apricot`, `coral`, `blaze`, `cloud`, `glacier`, `tide`, `meadow`), your own gradient, a color or an image; padding, corner radius, shadow, cursor style, maximum zoom, browser frame, accent color. See [Style](#style).
 - **Output**: 1920×1080 at 30 fps by default; any size up to 4K, 24 to 60 fps, optional GIF.
 
 The full format is the JSON schema in [`schema/scenario.schema.json`](schema/scenario.schema.json) (`npx agent-screenplay schema`), and the agent guide in [`skills/screenplay/SKILL.md`](skills/screenplay/SKILL.md). Examples are in [`examples/`](examples).
@@ -90,7 +90,7 @@ Set the look by eye: `npx agent-screenplay style demo.json` opens an editor in y
 
 Title and end cards (`title` and `end` steps) are **off by default**: turn them on with `"cards": true`, or with the switch in the editor.
 
-`background` is a preset name (`aurora` by default; the first presets, `ocean`, `sunset` and so on, still work), a color (`"#0f172a"`), an image path (relative to the file that sets it), or `{ "gradient": [2 to 4 colors], "angle": degrees }`.
+`background` is a preset name (`dawn` by default; earlier presets such as `aurora` or `ocean` still work), a color (`"#0f172a"`), an image path (relative to the file that sets it), or `{ "gradient": [2 to 4 colors], "angle": degrees }`.
 
 ## Signing in
 

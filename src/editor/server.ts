@@ -11,7 +11,8 @@ import { loadScenario } from "../scenario/load.js";
 import { BACKGROUNDS, Style, type Style as StyleT } from "../scenario/schema.js";
 import { readTake, type Take } from "../take.js";
 import { openSource } from "../render/sources.js";
-import { ALL_PRESETS, DEFAULT_BACKGROUND, MESH_PRESETS, presetColors } from "../render/presets.js";
+import { ALL_PRESETS, DEFAULT_BACKGROUND, GLOW_PRESETS, presetColors } from "../render/presets.js";
+import { glowImage } from "../render/style.js";
 import { defaultViewport } from "../drivers/web.js";
 
 /**
@@ -55,6 +56,11 @@ export async function startStyleEditor(file: string, opts: EditorOptions = {}): 
       if (req.headers["x-token"] !== token && url.searchParams.get("t") !== token) return send(res, 403, "text/plain", "forbidden");
 
       if (req.method === "GET" && url.pathname === "/api/state") return json(res, 200, state(scenarioFile));
+      if (req.method === "GET" && url.pathname === "/api/preset") {
+        // A glow preset drawn by the renderer itself, so the preview matches the video.
+        const jpg = presetImage(url.searchParams.get("name") ?? "", Number(url.searchParams.get("w")), Number(url.searchParams.get("h")));
+        return jpg ? sendCached(res, "image/jpeg", jpg) : send(res, 404, "text/plain", "no such preset");
+      }
       if (req.method === "GET" && url.pathname === "/api/frame") {
         const jpg = await previewFrame(scenarioFile);
         return jpg ? send(res, 200, "image/jpeg", jpg) : send(res, 404, "text/plain", "no recording yet");
@@ -134,7 +140,7 @@ export function state(scenarioFile: string) {
     hasVideo: fs.existsSync(loaded.outputs.mp4),
     /** Every preset the page may have to draw, and the ones it offers. */
     presets: Object.fromEntries(Object.entries(ALL_PRESETS).map(([k, p]) => [k, { ...p, colors: presetColors(p) }])),
-    offered: Object.keys(MESH_PRESETS),
+    offered: Object.keys(GLOW_PRESETS),
     defaults: { background: DEFAULT_BACKGROUND, padding: 72, radius: 14, shadow: true, cards: false },
   };
 }
@@ -249,6 +255,24 @@ export async function previewFrame(scenarioFile: string): Promise<Buffer | undef
   } finally {
     src.close();
   }
+}
+
+const presetCache = new Map<string, Buffer>();
+function presetImage(name: string, w: number, h: number): Buffer | undefined {
+  const p = GLOW_PRESETS[name];
+  if (!p || !(w > 0 && w <= 3840 && h > 0 && h <= 2160)) return undefined;
+  const key = `${name}:${Math.round(w)}x${Math.round(h)}`;
+  let jpg = presetCache.get(key);
+  if (!jpg) {
+    jpg = glowImage(p, Math.round(w), Math.round(h)).toBuffer("image/jpeg", 90);
+    presetCache.set(key, jpg);
+  }
+  return jpg;
+}
+
+function sendCached(res: http.ServerResponse, type: string, body: Buffer) {
+  res.writeHead(200, { "content-type": type, "cache-control": "private, max-age=3600" });
+  res.end(body);
 }
 
 function writeJson(file: string, value: unknown) {

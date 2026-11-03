@@ -326,7 +326,9 @@ function meshCss(p, w, h) {
   const layers = p.blobs.map((b) => `radial-gradient(circle ${b.r * side}px at ${b.x * w}px ${b.y * h}px, ${rgba(b.color, b.alpha)} 0%, ${rgba(b.color, b.alpha * 0.6)} 40%, ${rgba(b.color, 0)} 100%)`);
   return [...layers.reverse(), p.base].join(", ");
 }
-function presetCss(p, w, h) {
+function presetCss(p, w, h, name) {
+  // Glow presets are drawn by the renderer on the server: the preview is the video's own image.
+  if (p.kind === "glow") return `center / cover no-repeat url("/api/preset?t=${TOKEN}&name=${encodeURIComponent(name)}&w=${Math.round(w)}&h=${Math.round(h)}")`;
   return p.kind === "mesh" ? meshCss(p, w, h) : `linear-gradient(${p.angle}deg, ${p.stops.join(", ")})`;
 }
 /* The grain tile: the renderer's seeded noise (mulberry32, seed 7), 128×128. */
@@ -346,7 +348,7 @@ const grainUrl = (() => {
 function bgCss(bg) {
   if (typeof bg === "object") return `linear-gradient(${bg.angle ?? 135}deg, ${bg.gradient.join(", ")})`;
   const p = S.presets[bg];
-  if (p) return presetCss(p, S.output.width, S.output.height);
+  if (p) return presetCss(p, S.output.width, S.output.height, bg);
   if (/^#/.test(bg)) return bg;
   if (imageRef) return `url("/api/image?t=${TOKEN}&from=${imageRef.from}&path=${encodeURIComponent(imageRef.path)}")`;
   return "#111";
@@ -364,8 +366,8 @@ function draw(initial) {
     $(back).style.opacity = 1; $(front).style.opacity = 0; front = back; lastBg = css;
   }
   const preset = typeof style.background === "string" ? S.presets[style.background] : null;
-  // The light from the top left belongs to linear gradients; mesh presets have their grain.
-  $("glow").style.opacity = kindOf(style.background) === "gradient" && !(preset && preset.kind === "mesh") ? 1 : 0;
+  // The light from the top left belongs to linear gradients only.
+  $("glow").style.opacity = kindOf(style.background) === "gradient" && !(preset && preset.kind !== "linear") ? 1 : 0;
   $("grain").style.backgroundImage = `url(${grainUrl})`;
   // Same tile size as the renderer: 128 px, doubled at 4K.
   const tile = 128 * Math.max(1, Math.round(S.output.height / 1080));
@@ -416,7 +418,7 @@ function buildSwatches() {
     const b = document.createElement("button");
     b.className = "sw"; b.dataset.v = name; b.title = name; b.setAttribute("aria-label", name);
     // A swatch is the same mesh, drawn on a square.
-    b.style.background = presetCss(p, 60, 60);
+    b.style.background = presetCss(p, 120, 120, name);
     b.onclick = () => { style.background = name; change(); };
     pre.appendChild(b);
   }
@@ -437,7 +439,7 @@ function currentStops() {
   const bg = style.background;
   if (typeof bg === "object") return { stops: bg.gradient, angle: bg.angle ?? 135 };
   const p = S.presets[bg] || S.presets[S.defaults.background];
-  return { stops: p.colors, angle: p.kind === "linear" ? p.angle : 135 };
+  return { stops: p.colors, angle: p.kind === "linear" ? p.angle : p.kind === "glow" ? 90 + p.angle : 135 };
 }
 function customGradient() {
   if (typeof style.background === "object") return style.background;

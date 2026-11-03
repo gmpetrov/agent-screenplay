@@ -130,12 +130,23 @@ describe("default viewport", () => {
 });
 
 describe("background presets", () => {
-  it("draws the mesh presets, defaults to aurora, and still accepts the first presets", async () => {
-    const mesh = await resolveStyle({ background: "lagoon" }, ".");
-    expect(mesh.background.kind).toBe("mesh");
-    expect(mesh.darkBackground).toBe(false);
-    expect((await resolveStyle(undefined, ".")).background).toMatchObject({ kind: "mesh", base: "#070b1a" });
+  it("draws the glow presets, defaults to dawn, and still accepts earlier presets", async () => {
+    const glow = await resolveStyle({ background: "citrus" }, ".");
+    expect(glow.background.kind).toBe("glow");
+    expect(glow.darkBackground).toBe(true);
+    expect((await resolveStyle(undefined, ".")).background).toMatchObject({ kind: "glow", preset: { seed: 8 } });
+    expect((await resolveStyle({ background: "aurora" }, ".")).background).toMatchObject({ kind: "mesh", base: "#070b1a" });
     expect((await resolveStyle({ background: "ocean" }, ".")).background).toMatchObject({ kind: "gradient", angle: 135 });
+  });
+
+  it("draws a glow preset the same way every time, at any size", async () => {
+    const { glowImage } = await import("../src/render/style.js");
+    const { GLOW_PRESETS } = await import("../src/render/presets.js");
+    const a = glowImage(GLOW_PRESETS.iris, 320, 180).toBuffer("image/png");
+    const b = glowImage(GLOW_PRESETS.iris, 320, 180).toBuffer("image/png");
+    expect(a.equals(b)).toBe(true);
+    const big = glowImage(GLOW_PRESETS.iris, 1920, 1080);
+    expect([big.width, big.height]).toEqual([1920, 1080]);
   });
 
   it("paints grain deterministically, so the editor can match it", async () => {

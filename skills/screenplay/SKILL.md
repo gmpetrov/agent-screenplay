@@ -27,7 +27,7 @@ Tools: the MCP tools `screenplay_check`, `screenplay_record`, `screenplay_render
   "$schema": "https://raw.githubusercontent.com/gmpetrov/agent-screenplay/main/schema/scenario.schema.json",
   "url": "https://app.example.com/inbox",
   "auth": { "storageState": ".screenplay/auth.json" },
-  "style": { "background": "aurora" },
+  "style": { "background": "dawn" },
   "steps": [
     { "click": "text=Camille Laurent", "say": "When the AI agent gets stuck, the conversation lands in your inbox." },
     { "callout": "role=button[name='Take over']", "text": "Take over from the AI agent" },
@@ -94,12 +94,12 @@ On any step: `say` (narration: a caption, and speech when voice is on), `zoom` (
 ### Style, voice, output
 
 ```json
-"style": { "background": "aurora", "padding": 72, "radius": 14, "cursor": "macos", "maxZoom": 1.9, "frame": "browser", "accent": "#3b82f6", "captions": true },
+"style": { "background": "dawn", "padding": 72, "radius": 14, "cursor": "macos", "maxZoom": 1.9, "frame": "browser", "accent": "#3b82f6", "captions": true },
 "voice": { "enabled": true, "language": "fr" },
 "output": { "width": 1920, "height": 1080, "fps": 30, "gif": false }
 ```
 
-Backgrounds: `aurora` (default), `sky`, `dusk`, `ember`, `graphite` (dark), `lagoon`, `lilac`, `peach`, `linen` (light), a color (`#0f172a`), an image path, or a gradient `{ "gradient": ["#0ea5e9", "#6366f1"], "angle": 135 }`. `frame: "browser"` adds a minimal browser bar with the URL.
+Backgrounds: `dawn` (default), `iris`, `citrus`, `apricot`, `coral`, `blaze`, `cloud`, `glacier`, `tide`, `meadow`, a color (`#0f172a`), an image path, or a gradient `{ "gradient": ["#0ea5e9", "#6366f1"], "angle": 135 }`. `frame: "browser"` adds a minimal browser bar with the URL.
 
 A `screenplay.config.json` in the scenario's folder or a parent sets the style of every video below it (`{ "style": { … } }`); a scenario's own `style` wins, setting by setting. Keep a project's look there rather than repeating it in each scenario, and leave it alone unless asked. When a person wants to choose the look themselves, tell them to run `npx agent-screenplay style <scenario.json>`: it opens a visual editor in their browser (it needs a screen, so do not run it yourself in a headless environment).
 

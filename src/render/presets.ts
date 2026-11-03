@@ -29,11 +29,41 @@ export interface LinearPreset {
   dark: boolean;
 }
 
-export type Preset = MeshPreset | LinearPreset;
+/**
+ * Light smeared through glass: broad color fields, then long soft bands of light along one
+ * angle, blurred and grained. Drawn from a seed, so a preset always looks the same.
+ */
+export interface GlowPreset {
+  kind: "glow";
+  base: string;
+  palette: string[];
+  /** Direction of the bands of light, in degrees. */
+  angle: number;
+  seed: number;
+  dark: boolean;
+}
+
+export type Preset = MeshPreset | LinearPreset | GlowPreset;
+
+const glow = (base: string, palette: string[], angle: number, seed: number): GlowPreset => ({ kind: "glow", base, palette, angle, seed, dark: true });
+
+/** The presets offered, in the editor's order. White card text reads on all of them. */
+export const GLOW_PRESETS: Record<string, GlowPreset> = {
+  dawn: glow("#6d97ff", ["#3b78fc", "#ff9cc4", "#a9c9ff", "#ffd1e3"], -20, 8),
+  iris: glow("#6f76ee", ["#7f6cf3", "#4672ef", "#c6a8ff", "#e3d6ff"], -55, 9),
+  citrus: glow("#b993f2", ["#f9d443", "#9a6df0", "#f7e27a", "#e9a0dd"], -35, 3),
+  apricot: glow("#f6b48c", ["#ffd65c", "#ff9db7", "#ffb56e", "#fff0c2"], -40, 2),
+  coral: glow("#f2704a", ["#ff6a2c", "#ff9c7c", "#ffc7ad", "#f25a3a"], -15, 11),
+  blaze: glow("#e9784e", ["#ff7a2f", "#3f78f0", "#ffb38f", "#6a95f5"], -30, 5),
+  cloud: glow("#5b9bff", ["#2f78ff", "#a6d4ff", "#ffffff", "#c8b9ff"], -50, 4),
+  glacier: glow("#78aef5", ["#3b82f6", "#eef5ff", "#93c5fd", "#2563eb"], -30, 13),
+  tide: glow("#38a7d8", ["#2ec4b6", "#3a86ff", "#8ae3e8", "#5aa0ff"], -35, 7),
+  meadow: glow("#44bf68", ["#2fbf63", "#9be27c", "#169e72", "#d2f59a"], -25, 6),
+};
 
 const b = (x: number, y: number, r: number, color: string, alpha = 0.9): Blob => ({ x, y, r, color, alpha });
 
-/** The presets offered, in the editor's order: dark first, then light. */
+/** The mesh presets of 0.1.1: still drawn for scenarios that name them, no longer offered. */
 export const MESH_PRESETS: Record<string, MeshPreset> = {
   aurora: {
     kind: "mesh",
@@ -111,12 +141,13 @@ export const LEGACY_PRESETS: Record<string, LinearPreset> = {
   paper: { kind: "linear", stops: ["#fbf8f3", "#eee7dc"], angle: 160, dark: false },
 };
 
-export const ALL_PRESETS: Record<string, Preset> = { ...MESH_PRESETS, ...LEGACY_PRESETS };
-export const DEFAULT_BACKGROUND = "aurora";
+export const ALL_PRESETS: Record<string, Preset> = { ...GLOW_PRESETS, ...MESH_PRESETS, ...LEGACY_PRESETS };
+export const DEFAULT_BACKGROUND = "dawn";
 
 /** Two colors that sum up a preset, to start a custom gradient from it. */
 export function presetColors(p: Preset): [string, string] {
   if (p.kind === "linear") return [p.stops[0], p.stops[p.stops.length - 1]];
+  if (p.kind === "glow") return [p.palette[0], p.palette[1]];
   const [first, second] = [...p.blobs].sort((a, c) => c.alpha * c.r - a.alpha * a.r);
   return [first.color, (second ?? first).color];
 }
@@ -126,6 +157,18 @@ export function presetColors(p: Preset): [string, string] {
  * editor draw the same grain. Repeated over the frame.
  */
 export const NOISE_TILE = 128;
+
+/** The seeded random numbers both the renderer and the editor's previews use (mulberry32). */
+export function seeded(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 export function noiseValues(seed = 7): Uint8Array {
   let a = seed >>> 0;
   const out = new Uint8Array(NOISE_TILE * NOISE_TILE);
