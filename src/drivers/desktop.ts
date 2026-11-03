@@ -519,23 +519,14 @@ export class Recorder {
     if (!this.proc) return;
     const p = this.proc;
     this.proc = undefined;
-    await new Promise<void>((resolve) => {
-      p.on("close", () => resolve());
-      p.stdin.write("q");
-      setTimeout(() => p.kill("SIGINT"), 5000);
-    });
+    await stopChild(p, () => p.stdin.write("q"), () => p.kill("SIGINT"), 5000, "close");
   }
 
   private async stopScreencapture() {
     const { proc, spawnedAt } = this.mac!;
     this.mac = undefined;
     const stoppedAt = Date.now() / 1000 - this.t0;
-    await new Promise<void>((resolve) => {
-      if (proc.exitCode !== null || proc.signalCode !== null) return resolve();
-      proc.once("exit", () => resolve());
-      proc.kill("SIGINT");
-      setTimeout(() => proc.kill("SIGKILL"), 30_000);
-    });
+    await stopChild(proc, () => proc.kill("SIGINT"), () => proc.kill("SIGKILL"), 30_000);
     const info = probeVideo(this.file);
     if (!info) throw new Error("Screen capture produced no video: check that your terminal may record the screen in System Settings → Privacy & Security → Screen Recording.");
     // screencapture films until it is stopped, so the video ends when stop() was asked.
@@ -546,6 +537,28 @@ export class Recorder {
     const y = Math.max(0, Math.min(c.y, info.height - 2));
     this.crop = { x, y, width: Math.min(c.width, info.width - x) & ~1, height: Math.min(c.height, info.height - y) & ~1 };
   }
+}
+
+/**
+ * Asks a child process to stop (`ask`) and waits until it has; `force` runs if it is still there
+ * after `ms`. The timer is cleared once it ends, so it never keeps Screenplay running.
+ */
+export function stopChild(
+  proc: Pick<ChildProcess, "exitCode" | "signalCode" | "once">,
+  ask: () => void,
+  force: () => void,
+  ms: number,
+  event: "exit" | "close" = "exit",
+): Promise<void> {
+  return new Promise((resolve) => {
+    if (proc.exitCode !== null || proc.signalCode !== null) return resolve();
+    const timer = setTimeout(force, ms);
+    proc.once(event, () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    ask();
+  });
 }
 
 /** Length and size of a video file, read from ffmpeg's description of it. */
