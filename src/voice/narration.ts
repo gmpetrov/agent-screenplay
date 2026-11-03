@@ -4,7 +4,7 @@ import path from "node:path";
 import type { LoadedScenario } from "../scenario/load.js";
 import type { Voice } from "../scenario/schema.js";
 import { toClip } from "./audio.js";
-import { synthesizeAll, voiceKey, VoiceError, type Clip } from "./cartesia.js";
+import { cartesiaCacheFile, synthesizeAll, voiceKey, VoiceError, type Clip } from "./cartesia.js";
 import { ELEVENLABS_DEFAULTS, elevenLabsKey, elevenLabsSpeak } from "./elevenlabs.js";
 
 export type Provider = "cartesia" | "elevenlabs";
@@ -31,27 +31,37 @@ export async function narrate(
   if (opts.noVoice) return out;
   const cacheDir = path.join(loaded.workDir, "cache", "voice");
   const voice = loaded.scenario.voice ?? {};
+  // Title and end cards are left out of the video unless style.cards: so is their narration.
+  const cards = loaded.scenario.style?.cards ?? false;
   const toSpeak = new Map<number, string>();
   for (const [i, s] of loaded.scenario.steps.entries()) {
+    if (!cards && ("title" in s || "end" in s)) continue;
     const step = s as { say?: string; audio?: string };
     if (step.audio) out.set(i, await toClip(path.resolve(loaded.dir, step.audio), cacheDir, `The audio of step ${i + 1}`));
     else if (voice.enabled && step.say) toSpeak.set(i, step.say);
   }
   if (toSpeak.size === 0) return out;
-  // Cached clips need no key: only ask for a provider when something is left to generate.
-  const provider = voice.provider ?? (voiceKey() ? "cartesia" : elevenLabsKey() ? "elevenlabs" : undefined);
+  // Cached clips need no key: with no key set, use the provider whose cache already holds every
+  // sentence (a re-render after a style change), and only ask for a key when something is missing.
+  const texts = [...toSpeak.values()];
+  const provider: Provider =
+    voice.provider ??
+    (voiceKey()
+      ? "cartesia"
+      : elevenLabsKey()
+        ? "elevenlabs"
+        : texts.every((t) => fs.existsSync(cartesiaCacheFile(t, voice, cacheDir) ?? ""))
+          ? "cartesia"
+          : texts.every((t) => fs.existsSync(elevenLabsCacheFile(t, voice, cacheDir)))
+            ? "elevenlabs"
+            : pickProvider(voice));
   opts.log?.(`Generating narration for ${toSpeak.size} step(s)`);
-  if ((provider ?? pickProvider(voice)) === "cartesia") {
+  if (provider === "cartesia") {
     for (const [i, clip] of await synthesizeAll(toSpeak, voice, cacheDir)) out.set(i, clip);
     return out;
   }
   for (const [i, text] of toSpeak) {
-    const id = crypto
-      .createHash("sha1")
-      .update(JSON.stringify(["elevenlabs", voice.id ?? ELEVENLABS_DEFAULTS.voice, voice.model ?? ELEVENLABS_DEFAULTS.model, voice.language ?? "", voice.speed ?? 1, text]))
-      .digest("hex")
-      .slice(0, 16);
-    const mp3 = path.join(cacheDir, `el-${id}.mp3`);
+    const mp3 = elevenLabsCacheFile(text, voice, cacheDir);
     if (!fs.existsSync(mp3)) {
       const key = elevenLabsKey();
       if (!key) throw new VoiceError("voice.provider is elevenlabs but ELEVENLABS_API_KEY is not set (https://elevenlabs.io/app/settings/api-keys).");
@@ -62,4 +72,14 @@ export async function narrate(
     out.set(i, await toClip(mp3, cacheDir, `The narration of step ${i + 1}`));
   }
   return out;
+}
+
+/** Where a sentence's ElevenLabs audio is cached. */
+export function elevenLabsCacheFile(text: string, voice: Voice, cacheDir: string): string {
+  const id = crypto
+    .createHash("sha1")
+    .update(JSON.stringify(["elevenlabs", voice.id ?? ELEVENLABS_DEFAULTS.voice, voice.model ?? ELEVENLABS_DEFAULTS.model, voice.language ?? "", voice.speed ?? 1, text]))
+    .digest("hex")
+    .slice(0, 16);
+  return path.join(cacheDir, `el-${id}.mp3`);
 }

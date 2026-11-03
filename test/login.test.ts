@@ -8,6 +8,8 @@ import type { Browser } from "playwright-core";
 // closes the window from the test. That is how an agent-run login ends (no terminal to type in).
 describe("login", () => {
   it("saves the session when the person closes the window", async () => {
+    // The browser here is headless, but login checks for a screen first (Linux CI has none).
+    vi.stubEnv("DISPLAY", process.env.DISPLAY || ":99");
     const real = await import("../src/drivers/browser.js");
     let opened: Browser | undefined;
     vi.doMock("../src/drivers/browser.js", () => ({
@@ -27,5 +29,6 @@ describe("login", () => {
     expect(JSON.parse(fs.readFileSync(out, "utf8"))).toHaveProperty("cookies");
     fs.rmSync(dir, { recursive: true, force: true });
     vi.doUnmock("../src/drivers/browser.js");
+    vi.unstubAllEnvs();
   }, 30_000);
 });
