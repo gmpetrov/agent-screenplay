@@ -59,24 +59,16 @@ export async function realUserAgent(browser: Browser): Promise<string> {
 }
 
 /**
- * A bot check that blocks the page (Cloudflare's "Just a moment…"), or undefined. Only a page
- * that is the check itself counts: a Turnstile widget inside a usable page (a contact or sign-up
- * form) does not block anything.
+ * A bot check that blocks the page (Cloudflare's "Just a moment…"), or undefined. Only Cloudflare's
+ * own check page counts, known by its title or its challenge elements. A Turnstile widget inside a
+ * usable page (a sign-in or contact form, however short) does not block anything, so a challenge
+ * frame alone is never taken for a block.
  */
 export async function botCheck(page: import("playwright-core").Page): Promise<string | undefined> {
   const title = await page.title().catch(() => "");
   if (/^(just a moment|un instant|attention required|checking your browser|verify you are human)/i.test(title)) return title;
   const blocked = await page
-    .evaluate(() => {
-      // Cloudflare's interstitial page.
-      if (document.querySelector("#challenge-form, #cf-challenge-running, #challenge-stage, #challenge-body-text")) return true;
-      // A visible challenge frame on a page with almost nothing else to read.
-      const frame = Array.from(document.querySelectorAll<HTMLIFrameElement>('iframe[src*="challenges.cloudflare.com"]')).find((f) => {
-        const r = f.getBoundingClientRect();
-        return r.width > 0 && r.height > 0 && getComputedStyle(f).visibility !== "hidden";
-      });
-      return Boolean(frame) && (document.body?.innerText ?? "").trim().length < 200;
-    })
+    .evaluate(() => Boolean(document.querySelector("#challenge-form, #cf-challenge-running, #challenge-stage, #challenge-body-text")))
     .catch(() => false);
   return blocked ? title || "Cloudflare check" : undefined;
 }

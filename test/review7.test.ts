@@ -68,8 +68,11 @@ it.skipIf(process.platform === "win32")("does not take a usable page with a Turn
     expect(await botCheck(page)).toBeUndefined();
     await page.setContent(`<title>Just a moment...</title><div id="challenge-stage"></div>`);
     expect(await botCheck(page)).toBe("Just a moment...");
-    await page.setContent(`<title>example.com</title><iframe src="https://challenges.cloudflare.com/turnstile/v0/x" width="300" height="65"></iframe>`);
-    expect(await botCheck(page)).toBe("example.com");
+    // A short sign-in form with a visible Turnstile widget is usable, not blocked.
+    await page.setContent(
+      `<title>Sign in</title><h1>Welcome back</h1><form><label>Email<input name="email"></label><label>Password<input type="password"></label><iframe src="https://challenges.cloudflare.com/turnstile/v0/test" width="300" height="65"></iframe><button type="button">Sign in</button></form>`,
+    );
+    expect(await botCheck(page)).toBeUndefined();
   } finally {
     await browser.close();
   }
