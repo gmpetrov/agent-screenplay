@@ -27,7 +27,11 @@ export async function login(url: string, out: string, log: (msg: string) => void
   let saved = false;
   const save = async () => {
     try {
-      const state = await context.storageState();
+      // A closing browser may never answer: give up after a few seconds, keeping the last saved state.
+      const state = await Promise.race([
+        context.storageState(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
+      ]);
       fs.writeFileSync(`${file}.part`, JSON.stringify(state, null, 2), { mode: 0o600 });
       fs.renameSync(`${file}.part`, file);
       saved = true;
@@ -64,7 +68,8 @@ export async function login(url: string, out: string, log: (msg: string) => void
   process.once("SIGINT", done);
   process.once("SIGTERM", done);
 
-  await page.goto(url).catch(() => {});
+  // A window closed while the page loads ends the command too, even if the navigation never settles.
+  await Promise.race([page.goto(url).catch(() => {}), finished]);
   log("In the browser window: sign in, or pass the check if the site asks for one. Then close the window (or press Enter here).");
   await save();
   const poll = setInterval(save, 2000);
