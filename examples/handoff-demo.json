@@ -2,7 +2,7 @@
   "$schema": "../schema/scenario.schema.json",
   "name": "handoff-demo",
   "url": "demo-app/index.html",
-  "style": { "background": "aurora" },
+  "style": { "background": "dawn" },
   "steps": [
     { "title": "Human handoff, in one click", "subtitle": "Northwind Support · new in 2.4" },
     { "click": "text=Camille Laurent", "say": "When the AI agent gets stuck, the conversation lands in your inbox." },
