@@ -9,6 +9,7 @@ import { parseTarget } from "../scenario/target.js";
 import type { Box, Point, Take, TakeStep } from "../take.js";
 import { captureFfmpegPath } from "../ffmpeg.js";
 import { cardDuration, travelDuration, typingDelays } from "./pace.js";
+import { showIndicator, type Indicator } from "./indicator.js";
 import { StepError, sleep, type CheckReport, type CheckStepResult } from "./web.js";
 
 const run = promisify(execFile);
@@ -436,12 +437,24 @@ async function play(
   }
   const t0 = Date.now() / 1000;
   const now = () => Date.now() / 1000 - t0;
-  const sleepIf = (s: number) => (record && s > 0 ? sleep(s * 1000) : Promise.resolve());
+  // Stop on the pill ends the run: waits end at once, and the next step does not start.
+  let stopped = false;
+  let onStop!: () => void;
+  const stopSignal = new Promise<void>((r) => (onStop = r));
+  const stopIfAsked = () => {
+    if (stopped) throw new Error("Stopped: the person at the computer pressed Stop on the Screenplay pill. Nothing was recorded.");
+  };
+  const sleepIf = (s: number) => (record && s > 0 ? Promise.race([sleep(s * 1000), stopSignal]) : Promise.resolve());
   let recorder: Recorder | undefined;
+  let pill: Indicator | undefined;
   const checks: CheckStepResult[] = [];
   try {
     await ds.open(opts.log, { hideOthers: scenario.hideOthers });
     if (ds.screen && record) opts.log("Filming the whole screen: notifications and every visible window will be in the video.");
+    pill = showIndicator(record ? "Screenplay is recording" : "Screenplay is rehearsing", () => {
+      stopped = true;
+      onStop();
+    });
     const W = ds.frame.width;
     const H = ds.frame.height;
     if (record) {
@@ -455,6 +468,7 @@ async function play(
     const steps: TakeStep[] = [];
 
     for (let i = 0; i < scenario.steps.length; i++) {
+      stopIfAsked();
       const step = scenario.steps[i] as Step & Record<string, any>;
       const kind = stepKind(step);
       const label = describeStep(step);
@@ -558,12 +572,13 @@ async function play(
             } else {
               // Type in small chunks so the text appears progressively, like a person typing.
               for (let k = 0; k < text.length; k++) {
+                stopIfAsked();
                 const ch = text[k];
                 const t1 = Date.now();
                 if (ref) await ds.ad.call(["type", ref, ch]);
                 else await ds.press(ch === " " ? "space" : ch, where);
                 const spent = (Date.now() - t1) / 1000;
-                await sleep(Math.max(0, delays[k] - spent) * 1000);
+                await sleepIf(Math.max(0, delays[k] - spent));
               }
             }
             ts.actionEnd = now();
@@ -617,6 +632,7 @@ async function play(
           }
         }
       } catch (e) {
+        stopIfAsked();
         const err = e instanceof StepError ? e : new StepError(i, label, (e as Error).message);
         if (!record) {
           checks.push({ index: i, step: label, ok: false, error: err.message, candidates: err.candidates });
@@ -635,6 +651,7 @@ async function play(
       steps.push(ts);
       checks.push({ index: i, step: label, ok: true });
     }
+    stopIfAsked();
     if (!record) return { check: { ok: true, steps: checks } };
 
     await sleep(1000);
@@ -658,6 +675,7 @@ async function play(
     };
     return { take };
   } finally {
+    pill?.close();
     await recorder?.stop().catch(() => {});
     await ds.ad.endSession();
   }
