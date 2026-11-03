@@ -1,6 +1,6 @@
 {
   "name": "agent-screenplay",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "mcpName": "io.github.gmpetrov/agent-screenplay",
   "description": "Screen Studio-quality screen recordings for AI agents: write a scenario, Screenplay films it and edits it (smooth cursor, auto-zoom, callouts, voice-over).",
   "license": "MIT",
