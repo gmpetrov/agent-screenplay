@@ -2,9 +2,11 @@
 
 https://github.com/user-attachments/assets/dd9898da-4900-4a91-8620-57a860c46093
 
-**Screen Studio-quality screen recordings, made by your AI agent.**
+[![npm](https://img.shields.io/npm/v/agent-screenplay)](https://www.npmjs.com/package/agent-screenplay) [![MIT license](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.gmpetrov%2Fagent--screenplay-purple)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.gmpetrov/agent-screenplay)
 
-Ask Claude Code, Codex, Cursor or any agent: *"Make a video that shows how human handoff works"*. The agent explores your app and writes a short **scenario**; Screenplay plays it in a browser (or a desktop app), films it, and edits the video like Screen Studio would: smooth cursor, automatic zooms that follow the action, click effects, callouts, spotlight, captions, title cards, and an optional voice-over.
+**Create beautiful screen recordings with one prompt.** Any website, yours or someone else's, or any desktop app. Works with Claude Code, Codex, Cursor and any MCP client.
+
+Ask your agent: *"Make a video that shows how human handoff works"*. The agent explores the site or app and writes a short **scenario**; Screenplay plays it in a browser (or a desktop app), films it, and edits the video like Screen Studio would: smooth cursor, automatic zooms that follow the action, click effects, callouts, spotlight, captions, title cards, and an optional voice-over.
 
 ![Storyboard of an example video](docs/handoff-storyboard.png)
 
@@ -112,7 +114,7 @@ Each step's `say` is spoken, and the video waits for each sentence to finish, so
 
 - **[Cartesia](https://cartesia.ai)**: set `CARTESIA_API_KEY`.
 - **[ElevenLabs](https://elevenlabs.io)**: set `ELEVENLABS_API_KEY`. When both keys are set, Cartesia is used unless `"provider": "elevenlabs"`.
-- **Your own audio files**, with no key: give a step `"audio": "voice/02.mp3"` (MP3, WAV, M4A…), for instance lines you generated in ElevenLabs' or Cartesia's web app. The agent can write the narration for you, one line per step, ready to paste there. Adding audio needs no new filming: `render`.
+- **Your own audio files**, with no key: give a step `"audio": "voice/02.mp3"` (MP3, WAV, M4A…), for instance lines you generated in ElevenLabs' or Cartesia's web app, or with a local TTS model (Piper, Kokoro…) that your agent runs for you. The agent can write the narration for you, one line per step, ready to paste there. Adding audio needs no new filming: `render`.
 
 Narration is cached: re-rendering with unchanged text costs nothing. `voice.id` picks another voice, `voice.speed` its pace. Without voice, `say` still shows as a caption.
 
