@@ -40,9 +40,57 @@ interface Win {
   bounds: { x: number; y: number; width: number; height: number };
 }
 
+/** The error a run ends with when the person presses Stop on the pill. */
+export class StoppedError extends Error {
+  constructor() {
+    super("Stopped: the person at the computer pressed Stop on the Screenplay pill. Nothing was recorded.");
+  }
+}
+
+/**
+ * Stop for one run: `pause` is a sleep that Stop ends at once (its timer cleared, so nothing keeps
+ * the process alive), `signal` rejects with StoppedError on Stop, `check` throws once stopped.
+ */
+export function createStopper() {
+  let stopped = false;
+  const pending = new Set<() => void>();
+  let reject!: (e: Error) => void;
+  const signal = new Promise<never>((_, r) => (reject = r));
+  signal.catch(() => {});
+  return {
+    get stopped() {
+      return stopped;
+    },
+    signal,
+    stop() {
+      if (stopped) return;
+      stopped = true;
+      for (const done of [...pending]) done();
+      reject(new StoppedError());
+    },
+    check() {
+      if (stopped) throw new StoppedError();
+    },
+    pause(seconds: number): Promise<void> {
+      if (stopped || seconds <= 0) return Promise.resolve();
+      return new Promise((resolve) => {
+        const done = () => {
+          clearTimeout(timer);
+          pending.delete(done);
+          resolve();
+        };
+        const timer = setTimeout(done, seconds * 1000);
+        pending.add(done);
+      });
+    },
+  };
+}
+
 export class AgentDesktop {
   private bin: string;
   private session?: string;
+  private stopped = false;
+  private abort = new AbortController();
 
   constructor() {
     this.bin = AgentDesktop.locate();
@@ -64,14 +112,33 @@ export class AgentDesktop {
     throw new Error("Desktop recording needs agent-desktop: run `npm install -g agent-desktop` (https://github.com/vercel-labs/agent-desktop).");
   }
 
+  /** After Stop, every call fails at once and calls in flight are killed; only ending the session still runs. */
+  stop() {
+    this.stopped = true;
+    this.abort.abort();
+  }
+
   async call<T = any>(args: string[], opts: { allowFail?: boolean } = {}): Promise<Envelope<T>> {
+    const guarded = args[0] !== "session";
+    if (guarded && this.stopped) throw new StoppedError();
+    try {
+      const r = await this.invoke<T>(args, opts, guarded ? this.abort.signal : undefined);
+      if (guarded && this.stopped) throw new StoppedError();
+      return r;
+    } catch (e) {
+      if (guarded && this.stopped) throw new StoppedError();
+      throw e;
+    }
+  }
+
+  async invoke<T = any>(args: string[], opts: { allowFail?: boolean } = {}, signal?: AbortSignal): Promise<Envelope<T>> {
     const env = { ...process.env, ...(this.session ? { AGENT_DESKTOP_SESSION: this.session } : {}) };
     const isJs = this.bin.endsWith(".js");
     const cmd = isJs ? process.execPath : this.bin;
     const argv = isJs ? [this.bin, ...args] : args;
     let stdout = "";
     try {
-      const r = await run(cmd, argv, { env, maxBuffer: 32 * 1024 * 1024 });
+      const r = await run(cmd, argv, { env, maxBuffer: 32 * 1024 * 1024, signal });
       stdout = r.stdout;
     } catch (e) {
       stdout = (e as { stdout?: string }).stdout ?? "";
@@ -437,14 +504,14 @@ async function play(
   }
   const t0 = Date.now() / 1000;
   const now = () => Date.now() / 1000 - t0;
-  // Stop on the pill ends the run: waits end at once, and the next step does not start.
-  let stopped = false;
-  let onStop!: () => void;
-  const stopSignal = new Promise<void>((r) => (onStop = r));
-  const stopIfAsked = () => {
-    if (stopped) throw new Error("Stopped: the person at the computer pressed Stop on the Screenplay pill. Nothing was recorded.");
+  // Stop on the pill ends the run at once: no further input reaches the computer (agent-desktop
+  // refuses every call and kills those in flight), waits end, and the step under way is abandoned.
+  const stopper = createStopper();
+  const stopIfAsked = () => stopper.check();
+  const sleepIf = async (s: number) => {
+    if (record) await stopper.pause(s);
+    stopIfAsked();
   };
-  const sleepIf = (s: number) => (record && s > 0 ? Promise.race([sleep(s * 1000), stopSignal]) : Promise.resolve());
   let recorder: Recorder | undefined;
   let pill: Indicator | undefined;
   const checks: CheckStepResult[] = [];
@@ -452,15 +519,15 @@ async function play(
     await ds.open(opts.log, { hideOthers: scenario.hideOthers });
     if (ds.screen && record) opts.log("Filming the whole screen: notifications and every visible window will be in the video.");
     pill = showIndicator(record ? "Screenplay is recording" : "Screenplay is rehearsing", () => {
-      stopped = true;
-      onStop();
+      ds.ad.stop();
+      stopper.stop();
     });
     const W = ds.frame.width;
     const H = ds.frame.height;
     if (record) {
       recorder = new Recorder(path.join(takeDir, "capture.mp4"));
       await recorder.start(ds.frame, ds.scale, t0);
-      await sleep(600);
+      await sleepIf(0.6);
     }
     let cursor: Point = { x: W * 0.62, y: H * 0.7 };
     const cursorStart = { ...cursor };
@@ -505,132 +572,137 @@ async function play(
           ts.waits.push([w0, now()]);
           lastField = undefined; // the focused field belonged to the previous app
         }
-        switch (kind) {
-          case "title":
-          case "end":
-            ts.card = {
-              kind,
-              title: step[kind],
-              subtitle: step.subtitle,
-              duration: Math.max(step.duration ?? cardDuration(step[kind], step.subtitle), minDuration),
-            };
-            break;
-          case "goto":
-            throw new StepError(i, label, "goto works on websites only; desktop scenarios start with the app already open.");
-          case "open": {
-            if (!ds.screen) throw new StepError(i, label, 'open needs "screen": true: a window recording films one app.');
-            const w0 = now();
-            await ds.activate(step.open, opts.log);
-            lastField = undefined; // the focused field belonged to the previous app
-            await sleepIf(0.6); // let the window come to the front
-            ts.waits.push([w0, now()]);
-            break;
-          }
-          case "click":
-          case "select": {
-            const r = await resolve(step[kind]);
-            await travelTo(r.box);
-            ts.actionAt = now();
-            if (kind === "select") {
-              if (!r.ref) throw new StepError(i, label, "select needs an element.");
-              await ds.ad.call(["select", r.ref, step.option]);
-            } else await ds.clickAt(r, { double: step.double, right: step.button === "right" });
-            if (r.ref && parseTarget(step[kind]).kind !== "at") lastField = r.ref;
-            break;
-          }
-          case "hover": {
-            // Hover moves the real pointer (menus and tooltips need it); it is not filmed, the drawn cursor is.
-            const r = await resolve(step.hover);
-            await travelTo(r.box);
-            ts.actionAt = now();
-            if (r.ref) await ds.ad.call(["--headed", "hover", r.ref]);
-            else {
-              const x = Math.round(ds.frame.x + r.box.x + r.box.width / 2);
-              const y = Math.round(ds.frame.y + r.box.y + r.box.height / 2);
-              await ds.ad.call(["--headed", "mouse-move", "--xy", `${x},${y}`]);
+        // The step races Stop, so a run stopped mid-step (a click being resolved, a long wait) ends now.
+        const body = (async () => {
+          switch (kind) {
+            case "title":
+            case "end":
+              ts.card = {
+                kind,
+                title: step[kind],
+                subtitle: step.subtitle,
+                duration: Math.max(step.duration ?? cardDuration(step[kind], step.subtitle), minDuration),
+              };
+              break;
+            case "goto":
+              throw new StepError(i, label, "goto works on websites only; desktop scenarios start with the app already open.");
+            case "open": {
+              if (!ds.screen) throw new StepError(i, label, 'open needs "screen": true: a window recording films one app.');
+              const w0 = now();
+              await ds.activate(step.open, opts.log);
+              lastField = undefined; // the focused field belonged to the previous app
+              await sleepIf(0.6); // let the window come to the front
+              ts.waits.push([w0, now()]);
+              break;
             }
-            break;
-          }
-          case "type": {
-            let ref = lastField;
-            if (step.into) {
-              const r = await resolve(step.into);
+            case "click":
+            case "select": {
+              const r = await resolve(step[kind]);
               await travelTo(r.box);
               ts.actionAt = now();
-              await ds.clickAt(r);
-              ref = r.ref;
-              lastField = r.ref;
-              if (step.clear && ref) await ds.ad.call(["clear", ref], { allowFail: true });
-              await sleepIf(0.15);
-            } else ts.actionAt = now();
-            const text: string = step.type;
-            ts.typed = step.secret ? "•".repeat(text.length) : text;
-            const delays = typingDelays(text, scenario.typingSpeed ?? 1, i + 1);
-            if (!record) {
-              if (ref) await ds.ad.call(["type", ref, text]);
-              else for (const ch of text) await ds.press(ch === " " ? "space" : ch, where);
-            } else {
-              // Type in small chunks so the text appears progressively, like a person typing.
-              for (let k = 0; k < text.length; k++) {
-                stopIfAsked();
-                const ch = text[k];
-                const t1 = Date.now();
-                if (ref) await ds.ad.call(["type", ref, ch]);
-                else await ds.press(ch === " " ? "space" : ch, where);
-                const spent = (Date.now() - t1) / 1000;
-                await sleepIf(Math.max(0, delays[k] - spent));
+              if (kind === "select") {
+                if (!r.ref) throw new StepError(i, label, "select needs an element.");
+                await ds.ad.call(["select", r.ref, step.option]);
+              } else await ds.clickAt(r, { double: step.double, right: step.button === "right" });
+              if (r.ref && parseTarget(step[kind]).kind !== "at") lastField = r.ref;
+              break;
+            }
+            case "hover": {
+              // Hover moves the real pointer (menus and tooltips need it); it is not filmed, the drawn cursor is.
+              const r = await resolve(step.hover);
+              await travelTo(r.box);
+              ts.actionAt = now();
+              if (r.ref) await ds.ad.call(["--headed", "hover", r.ref]);
+              else {
+                const x = Math.round(ds.frame.x + r.box.x + r.box.width / 2);
+                const y = Math.round(ds.frame.y + r.box.y + r.box.height / 2);
+                await ds.ad.call(["--headed", "mouse-move", "--xy", `${x},${y}`]);
               }
+              break;
             }
-            ts.actionEnd = now();
-            if (step.submit) {
-              await sleepIf(0.25);
-              await ds.press("return", where);
+            case "type": {
+              let ref = lastField;
+              if (step.into) {
+                const r = await resolve(step.into);
+                await travelTo(r.box);
+                ts.actionAt = now();
+                await ds.clickAt(r);
+                ref = r.ref;
+                lastField = r.ref;
+                if (step.clear && ref) await ds.ad.call(["clear", ref], { allowFail: true });
+                await sleepIf(0.15);
+              } else ts.actionAt = now();
+              const text: string = step.type;
+              ts.typed = step.secret ? "•".repeat(text.length) : text;
+              const delays = typingDelays(text, scenario.typingSpeed ?? 1, i + 1);
+              if (!record) {
+                if (ref) await ds.ad.call(["type", ref, text]);
+                else for (const ch of text) await ds.press(ch === " " ? "space" : ch, where);
+              } else {
+                // Type in small chunks so the text appears progressively, like a person typing.
+                for (let k = 0; k < text.length; k++) {
+                  stopIfAsked();
+                  const ch = text[k];
+                  const t1 = Date.now();
+                  if (ref) await ds.ad.call(["type", ref, ch]);
+                  else await ds.press(ch === " " ? "space" : ch, where);
+                  const spent = (Date.now() - t1) / 1000;
+                  await sleepIf(Math.max(0, delays[k] - spent));
+                }
+              }
+              ts.actionEnd = now();
+              if (step.submit) {
+                await sleepIf(0.25);
+                await ds.press("return", where);
+              }
+              break;
             }
-            break;
-          }
-          case "press":
-            ts.actionAt = now();
-            await ds.press(step.press, where);
-            break;
-          case "scroll": {
-            const v = step.scroll as string;
-            const s0 = now();
-            if (["down", "up"].includes(v)) {
-              const r = await ds.ad.call<{ match?: { ref_id: string } }>(["find", ...(await ds.scope(where)), "--role", "scrollarea", "--first"], { allowFail: true });
-              const ref = r.data?.match?.ref_id;
-              if (!ref) throw new StepError(i, label, "no scrollable area found in the app.");
-              await ds.ad.call(["scroll", ref, "--direction", v, "--amount", "5"]);
-            } else if (["top", "bottom"].includes(v)) {
-              await ds.press(v === "top" ? "home" : "end", where);
-            } else {
-              const r = await resolve(v);
-              if (r.ref) await ds.ad.call(["scroll-to", r.ref], { allowFail: true });
+            case "press":
+              ts.actionAt = now();
+              await ds.press(step.press, where);
+              break;
+            case "scroll": {
+              const v = step.scroll as string;
+              const s0 = now();
+              if (["down", "up"].includes(v)) {
+                const r = await ds.ad.call<{ match?: { ref_id: string } }>(["find", ...(await ds.scope(where)), "--role", "scrollarea", "--first"], { allowFail: true });
+                const ref = r.data?.match?.ref_id;
+                if (!ref) throw new StepError(i, label, "no scrollable area found in the app.");
+                await ds.ad.call(["scroll", ref, "--direction", v, "--amount", "5"]);
+              } else if (["top", "bottom"].includes(v)) {
+                await ds.press(v === "top" ? "home" : "end", where);
+              } else {
+                const r = await resolve(v);
+                if (r.ref) await ds.ad.call(["scroll-to", r.ref], { allowFail: true });
+              }
+              await sleepIf(0.5);
+              (ts.scrolls ??= []).push([s0, now()]);
+              break;
             }
-            await sleepIf(0.5);
-            (ts.scrolls ??= []).push([s0, now()]);
-            break;
+            case "wait": {
+              const w0 = now();
+              if (typeof step.wait === "number") await sleepIf(step.wait);
+              else await ds.resolve(step.wait, where, (step.timeout ?? 30) * 1000);
+              ts.waits.push([w0, now()]);
+              break;
+            }
+            case "pause":
+              await sleepIf(step.pause);
+              break;
+            case "callout":
+            case "highlight":
+            case "zoomTo": {
+              const r = await resolve(step[kind]);
+              ts.box = r.box;
+              ts.actionAt = now();
+              const d = Math.max(step.duration ?? (kind === "zoomTo" ? 2 : 3), minDuration);
+              await sleepIf(d + (kind === "zoomTo" ? 0 : 0.55));
+              break;
+            }
           }
-          case "wait": {
-            const w0 = now();
-            if (typeof step.wait === "number") await sleepIf(step.wait);
-            else await ds.resolve(step.wait, where, (step.timeout ?? 30) * 1000);
-            ts.waits.push([w0, now()]);
-            break;
-          }
-          case "pause":
-            await sleepIf(step.pause);
-            break;
-          case "callout":
-          case "highlight":
-          case "zoomTo": {
-            const r = await resolve(step[kind]);
-            ts.box = r.box;
-            ts.actionAt = now();
-            const d = Math.max(step.duration ?? (kind === "zoomTo" ? 2 : 3), minDuration);
-            await sleepIf(d + (kind === "zoomTo" ? 0 : 0.55));
-            break;
-          }
-        }
+        })();
+        body.catch(() => {});
+        await Promise.race([body, stopper.signal]);
       } catch (e) {
         stopIfAsked();
         const err = e instanceof StepError ? e : new StepError(i, label, (e as Error).message);
@@ -654,7 +726,7 @@ async function play(
     stopIfAsked();
     if (!record) return { check: { ok: true, steps: checks } };
 
-    await sleep(1000);
+    await sleepIf(1);
     const duration = now();
     const rec = recorder!;
     await rec.stop();
