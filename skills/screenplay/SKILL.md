@@ -94,7 +94,7 @@ On any step: `say` (narration: a caption, and speech when voice is on), `zoom` (
 ### Style, voice, output
 
 ```json
-"style": { "background": "dawn", "padding": 72, "radius": 14, "cursor": "macos", "maxZoom": 1.9, "frame": "browser", "accent": "#3b82f6", "captions": true },
+"style": { "background": "dawn", "padding": 72, "radius": 14, "cursor": "arrow", "click": "ripple", "maxZoom": 1.9, "frame": "browser", "accent": "#3b82f6", "captions": true },
 "voice": { "enabled": true, "language": "fr" },
 "output": { "width": 1920, "height": 1080, "fps": 30, "gif": false }
 ```

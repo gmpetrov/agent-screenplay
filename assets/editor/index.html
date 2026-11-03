@@ -248,6 +248,14 @@ kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--faint); }
         <div class="row"><span>Shadow</span><button class="switch" id="shadow" role="switch" aria-label="Shadow"></button></div>
         <div class="row" style="margin-top:16px"><span>Intro &amp; outro cards</span><button class="switch" id="cards" role="switch" aria-label="Intro and outro cards"></button></div>
       </div>
+
+      <div class="section">
+        <p class="label">Cursor</p>
+        <div class="seg" id="cursorKind"><span class="pill"></span><button data-k="arrow">Arrow</button><button data-k="macos">macOS</button><button data-k="dot">Dot</button></div>
+        <p class="label" style="margin-top:16px">Click</p>
+        <div class="seg" id="clickKind"><span class="pill"></span><button data-k="ripple">Ripple</button><button data-k="rays">Rays</button><button data-k="confetti">Confetti</button><button data-k="sparkle">Sparkle</button></div>
+        <p class="note on" style="display:block">Shown in the video: Render to see them.</p>
+      </div>
     </div>
 
     <div class="foot">
@@ -284,7 +292,7 @@ async function load() {
   S = await (await api("/api/state")).json();
   $("name").textContent = S.name;
   const eff = { ...S.defaults, ...S.projectStyle, ...S.scenarioStyle };
-  style = { background: eff.background, padding: eff.padding, radius: eff.radius, shadow: eff.shadow, cards: eff.cards };
+  style = { background: eff.background, padding: eff.padding, radius: eff.radius, shadow: eff.shadow, cards: eff.cards, cursor: eff.cursor, click: eff.click };
   if (kindOf(style.background) === "image") imageRef = { path: style.background, from: S.scenarioStyle.background !== undefined ? "scenario" : "project" };
   saved = JSON.stringify(style);
   // A video that already has its own look keeps it; otherwise the look is for the whole project.
@@ -462,6 +470,8 @@ $("rad").oninput = (e) => { live(); style.radius = +e.target.value; change(); };
 $("shadow").onclick = () => { style.shadow = !style.shadow; change(); };
 // Cards are not in the frame preview: the rendered video shows them.
 $("cards").onclick = () => { style.cards = !style.cards; change(); };
+$("cursorKind").querySelectorAll("button").forEach((b) => (b.onclick = () => { style.cursor = b.dataset.k; change(); }));
+$("clickKind").querySelectorAll("button").forEach((b) => (b.onclick = () => { style.click = b.dataset.k; change(); }));
 $("reset").onclick = () => {
   style = { ...S.defaults };
   setKind(kindOf(style.background), true);
@@ -534,6 +544,8 @@ function sync() {
   }
   $("shadow").setAttribute("aria-checked", String(style.shadow));
   $("cards").setAttribute("aria-checked", String(style.cards));
+  setSeg($("cursorKind"), style.cursor);
+  setSeg($("clickKind"), style.click);
   $("reset").disabled = JSON.stringify(style) === JSON.stringify({ ...S.defaults });
   // The recording keeps its shape: when it is not the video's, the background shows on two sides even with no padding.
   const cap = S.capture || { width: 1440, height: 900 }, r = cap.width / cap.height, R = S.output.width / S.output.height;

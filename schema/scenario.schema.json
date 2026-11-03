@@ -139,19 +139,31 @@
           "type": "boolean"
         },
         "cursor": {
-          "description": "Cursor drawn in the video (default macos).",
+          "description": "Cursor drawn in the video: arrow (default, a rounded arrow in the accent color), macos (the classic black arrow), dot or none.",
           "type": "string",
           "enum": [
+            "arrow",
             "macos",
             "dot",
             "none"
           ]
         },
         "cursorSize": {
-          "description": "Cursor scale (default 1).",
+          "description": "Cursor scale (default 1: the arrow is about 44 px tall in a 1080p video).",
           "type": "number",
           "minimum": 0.5,
           "maximum": 3
+        },
+        "click": {
+          "description": "What a click shows, in the accent color: ripple (default, a soft disc and two rings), rays, confetti, sparkle or none.",
+          "type": "string",
+          "enum": [
+            "ripple",
+            "rays",
+            "confetti",
+            "sparkle",
+            "none"
+          ]
         },
         "maxZoom": {
           "description": "Highest automatic zoom (default 1.9). Automatic zooms also stop where the capture runs out of pixels, so a small app window that already fills the video is not zoomed; a number in a step's `zoom` still forces it.",
