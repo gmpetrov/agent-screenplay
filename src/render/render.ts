@@ -29,6 +29,19 @@ export interface RenderResult {
 }
 
 const FADE = 0.4;
+/** How long a click's effect lasts, in seconds. */
+const CLICK_EFFECT_S = 0.7;
+
+/**
+ * The cursor's size around a click, `d` seconds after it: it sinks to 82 % as the click
+ * happens, bounces to 106 % on release, then settles.
+ */
+export function pressAt(d: number): number {
+  if (d < -0.08 || d >= 0.4) return 1;
+  if (d < 0.04) return 1 - 0.18 * Math.sin((Math.PI / 2) * ((d + 0.08) / 0.12));
+  if (d < 0.18) return 0.82 + 0.24 * Math.sin((Math.PI / 2) * ((d - 0.04) / 0.14));
+  return 1 + 0.06 * (1 - (d - 0.18) / 0.22);
+}
 /** How far past the capture's own pixels the camera may magnify before the picture turns soft. */
 const MAX_UPSCALE = 1.15;
 
@@ -196,8 +209,8 @@ export async function renderTake(loaded: LoadedScenario, take: Take, opts: Rende
     let press = 1;
     for (const c of plan.clicks) {
       const d = o - c;
-      if (d > -0.08 && d < 0.3) press = Math.min(press, 1 - 0.16 * Math.sin(Math.PI * clamp01((d + 0.08) / 0.38)));
-      if (d >= 0 && d < 0.55) st.ripples.push({ p: cursorAt(plan.movements, take.cursorStart, s), u: d / 0.55 });
+      if (d > -0.08 && d < 0.4) press = pressAt(d);
+      if (d >= 0 && d < CLICK_EFFECT_S) st.ripples.push({ p: cursorAt(plan.movements, take.cursorStart, s), u: d / CLICK_EFFECT_S });
     }
     st.cursor = { p: cursorAt(plan.movements, take.cursorStart, s), alpha: clamp01(alpha), press };
     for (const a of plan.annotations) {

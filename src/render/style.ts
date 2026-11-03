@@ -19,7 +19,8 @@ export interface ResolvedStyle {
   padding: number;
   radius: number;
   shadow: boolean;
-  cursor: "macos" | "dot" | "none";
+  cursor: "arrow" | "macos" | "dot" | "none";
+  click: "ripple" | "rays" | "confetti" | "sparkle" | "none";
   cursorSize: number;
   maxZoom: number;
   autoZoom: boolean;
@@ -62,7 +63,8 @@ export async function resolveStyle(style: Style | undefined, baseDir: string): P
     padding: s.padding ?? 72,
     radius: s.radius ?? 14,
     shadow: s.shadow ?? true,
-    cursor: s.cursor ?? "macos",
+    cursor: s.cursor ?? "arrow",
+    click: s.click ?? "ripple",
     cursorSize: s.cursorSize ?? 1,
     maxZoom: s.maxZoom ?? 1.9,
     autoZoom: s.autoZoom ?? true,

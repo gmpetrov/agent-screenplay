@@ -64,7 +64,7 @@ Requirements: Node 20+. ffmpeg and the drawing library ship with the package.
 - **Targets** name elements the way people see them: `text=…`, `role=button[name='…']`, `label=…`, `placeholder=…`, `testid=…`, `css=…` (web only), `at=x,y` (desktop apps without accessible elements only).
 - **Actions**: `goto`, `click`, `type`, `press`, `hover`, `scroll`, `select`, `wait`, `pause`.
 - **Direction**: `title` and `end` cards, `callout` (a bubble pointing at an element), `highlight` (spotlight), `zoomTo`, and on any step `say` (caption and voice), `zoom`, `hold`.
-- **Style**: background preset (soft light gradients: `dawn`, `iris`, `citrus`, `apricot`, `coral`, `blaze`, `cloud`, `glacier`, `tide`, `meadow`), your own gradient, a color or an image; padding, corner radius, shadow, cursor style, maximum zoom, browser frame, accent color. See [Style](#style).
+- **Style**: background preset (soft light gradients: `dawn`, `iris`, `citrus`, `apricot`, `coral`, `blaze`, `cloud`, `glacier`, `tide`, `meadow`), your own gradient, a color or an image; padding, corner radius, shadow, the cursor (`arrow` by default, a rounded arrow in the accent color; `macos`, `dot`) and its click effect (`ripple` by default; `rays`, `confetti`, `sparkle`), maximum zoom, browser frame, accent color. See [Style](#style).
 - **Output**: 1920×1080 at 30 fps by default; any size up to 4K, 24 to 60 fps, optional GIF.
 
 The full format is the JSON schema in [`schema/scenario.schema.json`](schema/scenario.schema.json) (`npx agent-screenplay schema`), and the agent guide in [`skills/screenplay/SKILL.md`](skills/screenplay/SKILL.md). Examples are in [`examples/`](examples).

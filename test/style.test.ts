@@ -44,17 +44,17 @@ describe("style", () => {
   });
 
   it("saves to the scenario, keeping its other settings", () => {
-    const { file } = project(undefined, { cursor: "dot", padding: 10 });
+    const { file } = project(undefined, { accent: "#ff0066", padding: 10 });
     saveStyle(file, "scenario", { background: "#0f172a", padding: 96, radius: 20, shadow: false });
-    expect(read(file).style).toEqual({ cursor: "dot", padding: 96, background: "#0f172a", radius: 20, shadow: false });
+    expect(read(file).style).toEqual({ accent: "#ff0066", padding: 96, background: "#0f172a", radius: 20, shadow: false });
   });
 
   it("saves to the project and removes the scenario's overrides of those settings", () => {
-    const { root, file } = project(undefined, { cursor: "dot", padding: 10, radius: 2 });
+    const { root, file } = project(undefined, { accent: "#ff0066", padding: 10, radius: 2 });
     const saved = saveStyle(file, "project", { background: { gradient: ["#0ea5e9", "#6366f1"] }, padding: 96, radius: 20, shadow: true });
     expect(saved).toBe(path.join(path.dirname(file), "screenplay.config.json"));
     expect(read(saved).style).toEqual({ background: { gradient: ["#0ea5e9", "#6366f1"] }, padding: 96, radius: 20, shadow: true });
-    expect(read(file).style).toEqual({ cursor: "dot" });
+    expect(read(file).style).toEqual({ accent: "#ff0066" });
     // An existing config higher up is the one updated.
     const p2 = project({ style: { accent: "#ff0000" } });
     saveStyle(p2.file, "project", { padding: 50 } as never);
@@ -77,7 +77,7 @@ describe("style", () => {
   });
 
   it("reports the styles as written", () => {
-    const { file } = project({ style: { padding: 120 } }, { radius: 3, cursor: "dot" });
+    const { file } = project({ style: { padding: 120 } }, { radius: 3, accent: "#ff0066" });
     const s = state(file);
     expect(s.projectStyle).toEqual({ padding: 120 });
     expect(s.scenarioStyle).toEqual({ radius: 3 });
@@ -153,5 +153,32 @@ describe("background presets", () => {
     const { noiseValues } = await import("../src/render/presets.js");
     expect(Array.from(noiseValues().slice(0, 4))).toEqual(Array.from(noiseValues().slice(0, 4)));
     expect(new Set(noiseValues()).size).toBeGreaterThan(200);
+  });
+});
+
+describe("cursor", () => {
+  it("defaults to the rounded arrow with a ripple, and keeps the classic one", async () => {
+    const d = await resolveStyle(undefined, ".");
+    expect([d.cursor, d.click]).toEqual(["arrow", "ripple"]);
+    const old = await resolveStyle({ cursor: "macos", click: "rays" }, ".");
+    expect([old.cursor, old.click]).toEqual(["macos", "rays"]);
+    expect(() => parseScenario({ url: "x", style: { click: "boom" }, steps: [{ pause: 1 }] })).toThrow();
+  });
+
+  it("sinks to 82 % on a click, bounces to 106 %, then settles", async () => {
+    const { pressAt } = await import("../src/render/render.js");
+    expect(pressAt(-0.2)).toBe(1);
+    expect(pressAt(0.04)).toBeCloseTo(0.82, 2);
+    expect(pressAt(0.18)).toBeCloseTo(1.06, 2);
+    expect(pressAt(0.4)).toBe(1);
+    for (let d = -0.1; d < 0.45; d += 0.01) expect(pressAt(d)).toBeGreaterThan(0.8);
+  });
+
+  it("draws every click effect without error", async () => {
+    const { createCanvas } = await import("@napi-rs/canvas");
+    const { drawClick, drawCursor } = await import("../src/render/compose.js");
+    const ctx = createCanvas(200, 200).getContext("2d");
+    for (const kind of ["ripple", "rays", "confetti", "sparkle", "none"] as const) for (const u of [0, 0.3, 0.99]) drawClick(ctx, kind, { x: 100, y: 100 }, u, "#3b82f6", 1);
+    for (const kind of ["arrow", "macos", "dot"] as const) drawCursor(ctx, kind, { x: 100, y: 100 }, 1, 1, "#3b82f6");
   });
 });

@@ -1,4 +1,4 @@
-import { createCanvas, type Canvas, type Image, type SKRSContext2D } from "@napi-rs/canvas";
+import { createCanvas, Path2D, type Canvas, type Image, type SKRSContext2D } from "@napi-rs/canvas";
 import type { Annotation, Camera, Caption } from "../direct/plan.js";
 import type { Box, Point } from "../take.js";
 import { FONT, paintBackground, roundRect, type ResolvedStyle } from "./style.js";
@@ -195,26 +195,13 @@ export function drawCapture(
     if (a.text) drawBubble(ctx, layout, style, a.text, b, inU, outU);
   }
 
-  // Click ripples.
-  for (const r of st.ripples) {
-    const q = toOut(r.p);
-    const rad = (8 + 30 * easeOut(r.u)) * k * (0.8 + 0.2 * z);
-    ctx.save();
-    ctx.globalAlpha = 0.55 * (1 - r.u);
-    ctx.beginPath();
-    ctx.arc(q.x, q.y, rad, 0, Math.PI * 2);
-    ctx.fillStyle = hexA(style.accent, 0.25);
-    ctx.fill();
-    ctx.lineWidth = 2.5 * k;
-    ctx.strokeStyle = style.accent;
-    ctx.stroke();
-    ctx.restore();
-  }
+  // Click effects.
+  for (const r of st.ripples) drawClick(ctx, style.click, toOut(r.p), r.u, style.accent, k * (0.8 + 0.2 * z));
 
   if (st.cursor && st.cursor.alpha > 0.01 && style.cursor !== "none") {
     const q = toOut(st.cursor.p);
     const size = k * style.cursorSize * (1 + 0.4 * (z - 1)) * st.cursor.press;
-    drawCursor(ctx, style.cursor, q, size, st.cursor.alpha);
+    drawCursor(ctx, style.cursor, q, size, st.cursor.alpha, style.accent);
   }
 
   if (st.caption) {
@@ -352,10 +339,32 @@ export function drawCard(
 }
 
 /** macOS-style arrow, or a soft dot. `size` is 1 at 1080p. */
-export function drawCursor(ctx: SKRSContext2D, kind: "macos" | "dot", p: Point, size: number, alpha: number) {
+/** The rounded arrow: tip at (1.5, 0.6), about 20 units tall. */
+const ARROW = new Path2D("M1.5 1.2C1.5.4 2.4 0 3 .5L16.6 11.6C17.3 12.2 16.9 13.3 16 13.3L9.9 13.4C9.5 13.4 9.1 13.6 8.9 13.9L5 19.7C4.4 20.5 3.1 20.1 3.1 19.1Z");
+const STAR = new Path2D("M0-11C.9-3.4 3.4-.9 11 0 3.4.9.9 3.4 0 11-.9 3.4-3.4.9-11 0-3.4-.9-.9-3.4 0-11Z");
+
+export function drawCursor(ctx: SKRSContext2D, kind: "arrow" | "macos" | "dot", p: Point, size: number, alpha: number, accent = "#3b82f6") {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(p.x, p.y);
+  if (kind === "arrow") {
+    // 44 px tall at size 1 in a 1080p video; the tip sits on the point.
+    const s = 2.19 * size;
+    ctx.scale(s, s);
+    ctx.translate(-1.5, -0.6);
+    ctx.shadowColor = "rgba(0,0,0,0.35)";
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 1.4;
+    ctx.fillStyle = accent;
+    ctx.fill(ARROW);
+    ctx.shadowColor = "transparent";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = "#ffffff";
+    ctx.stroke(ARROW);
+    ctx.restore();
+    return;
+  }
   if (kind === "dot") {
     ctx.beginPath();
     ctx.arc(0, 0, 13 * size, 0, Math.PI * 2);
@@ -411,6 +420,100 @@ export function wrap(ctx: SKRSContext2D, text: string, maxW: number): string[] {
   }
   if (line) lines.push(line);
   return lines.length ? lines : [""];
+}
+
+/**
+ * A click's effect, `u` from 0 to 1 over its life, in the accent color with a white edge so it
+ * reads on any background, even a button of the same color. `k` scales it with the video and zoom.
+ */
+export function drawClick(ctx: SKRSContext2D, kind: ResolvedStyle["click"], q: Point, u: number, accent: string, k: number) {
+  if (kind === "none") return;
+  ctx.save();
+  ctx.translate(q.x, q.y);
+  const phase = (start: number, len: number) => clamp01((u - start) / len);
+  if (kind === "ripple") {
+    // A soft disc, then two rings, each a little later.
+    const ring = (start: number, r0: number, fill: boolean, width: number) => {
+      const t = phase(start, 0.62);
+      if (t <= 0 || t >= 1) return;
+      const r = r0 * k * (0.3 + 2.3 * easeOut(t));
+      ctx.globalAlpha = 0.8 * (1 - t);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      if (fill) {
+        ctx.fillStyle = hexA(accent, 0.22);
+        ctx.fill();
+        return;
+      }
+      ctx.lineWidth = (width + 2) * k;
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.stroke();
+      ctx.lineWidth = width * k;
+      ctx.strokeStyle = accent;
+      ctx.stroke();
+    };
+    ring(0, 16, true, 0);
+    ring(0.11, 16, false, 2.2);
+    ring(0.26, 22, false, 1.6);
+  } else if (kind === "rays") {
+    const t = phase(0, 0.7);
+    if (t < 1) {
+      const e = easeOut(t);
+      ctx.globalAlpha = 1 - t;
+      ctx.lineCap = "round";
+      for (const pass of [0, 1]) {
+        ctx.lineWidth = (pass ? 3.4 : 6.4) * k;
+        ctx.strokeStyle = pass ? accent : "#ffffff";
+        for (let i = 0; i < 6; i++) {
+          const a = -Math.PI / 2 + (i * Math.PI) / 3;
+          const r0 = (14 + 14 * e) * k;
+          const r1 = r0 + 9 * k * (1 - 0.5 * t);
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
+          ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+          ctx.stroke();
+        }
+      }
+    }
+  } else if (kind === "confetti") {
+    const t = phase(0, 0.8);
+    if (t < 1) {
+      const e = easeOut(t);
+      const shades = [accent, hexA(accent, 0.75), accent, hexA(accent, 0.55), accent, hexA(accent, 0.75), accent];
+      const dirs: Array<[number, number, number]> = [[0, -56, 6.5], [42, -37, 5.3], [56, 4, 6.1], [37, 42, 4.9], [-42, -37, 5.7], [-56, 4, 4.9], [-36, 42, 4.5]];
+      ctx.globalAlpha = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4;
+      dirs.forEach(([dx, dy, r], i) => {
+        ctx.beginPath();
+        ctx.arc(dx * k * (0.3 + 0.7 * e), dy * k * (0.3 + 0.7 * e), r * k * (1 - 0.55 * t), 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(dx * k * (0.3 + 0.7 * e), dy * k * (0.3 + 0.7 * e), Math.max(0, r * k * (1 - 0.55 * t) - 1.5 * k), 0, Math.PI * 2);
+        ctx.fillStyle = shades[i];
+        ctx.fill();
+      });
+    }
+  } else if (kind === "sparkle") {
+    // Three four-point stars that grow, turn and vanish, one after another.
+    const stars: Array<[number, number, number]> = [[36, -36, 0], [-33, -25, 0.08], [33, 33, 0.16]];
+    for (const [x, y, start] of stars) {
+      const t = phase(start, 0.6);
+      if (t <= 0 || t >= 1) continue;
+      const sc = (t < 0.3 ? easeOut(t / 0.3) * 1.15 : 1.15 - 0.25 * ((t - 0.3) / 0.4)) * (t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1);
+      ctx.save();
+      ctx.translate(x * k, y * k);
+      ctx.rotate((Math.PI / 2) * t);
+      ctx.scale(sc * 1.4 * k, sc * 1.4 * k);
+      ctx.fillStyle = accent;
+      ctx.fill(STAR);
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke(STAR);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
 }
 
 export function easeOut(t: number) {

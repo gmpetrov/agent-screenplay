@@ -189,8 +189,15 @@ export const Style = z
     padding: z.number().min(0).max(400).optional().describe("Space around the recording, in output pixels (default 72)."),
     radius: z.number().min(0).max(80).optional().describe("Corner radius of the recording (default 14)."),
     shadow: z.boolean().optional().describe("Drop shadow under the recording (default true)."),
-    cursor: z.enum(["macos", "dot", "none"]).optional().describe("Cursor drawn in the video (default macos)."),
-    cursorSize: z.number().min(0.5).max(3).optional().describe("Cursor scale (default 1)."),
+    cursor: z
+      .enum(["arrow", "macos", "dot", "none"])
+      .optional()
+      .describe("Cursor drawn in the video: arrow (default, a rounded arrow in the accent color), macos (the classic black arrow), dot or none."),
+    cursorSize: z.number().min(0.5).max(3).optional().describe("Cursor scale (default 1: the arrow is about 44 px tall in a 1080p video)."),
+    click: z
+      .enum(["ripple", "rays", "confetti", "sparkle", "none"])
+      .optional()
+      .describe("What a click shows, in the accent color: ripple (default, a soft disc and two rings), rays, confetti, sparkle or none."),
     maxZoom: z.number().min(1).max(4).optional().describe("Highest automatic zoom (default 1.9). Automatic zooms also stop where the capture runs out of pixels, so a small app window that already fills the video is not zoomed; a number in a step's `zoom` still forces it."),
     autoZoom: z.boolean().optional().describe("Zoom automatically on clicks and typing (default true)."),
     captions: z.boolean().optional().describe("Show the `say` text as captions (default true)."),
