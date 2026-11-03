@@ -10,7 +10,7 @@ import { parseScenario } from "../scenario/load.js";
 import { VERSION } from "../version.js";
 
 const INSTRUCTIONS = `Screenplay makes Screen Studio-quality screen recordings (smooth cursor, auto-zoom, callouts, captions, optional voice-over) from a JSON scenario you write.
-Before your first recording, call screenplay_guide and follow it: explore the app, write the scenario, screenplay_check until it plays to the end, screenplay_record, look at the returned storyboard, fix, and re-run (screenplay_render when only text/style/zoom changed).`;
+Before your first recording, call screenplay_guide and follow it: ask whether the person wants a voice-over, explore the app, write the scenario, screenplay_check until it plays to the end, screenplay_record, look at the returned storyboard, fix, and re-run (screenplay_render when only text/style/zoom changed).`;
 
 const PathArg = z
   .string()
@@ -141,7 +141,7 @@ export async function startMcpServer() {
     {
       title: "Edit the last recording again",
       description:
-        "Re-edit the last recording of this scenario without filming: use it after changing text, narration (say), callouts, style, zoom or output. Changing actions needs screenplay_record. Does not touch the app; writes the video files, and sends new narration text to Cartesia when the scenario enables voice-over.",
+        "Re-edit the last recording of this scenario without filming: use it after changing text, narration (say), callouts, style, zoom or output. Changing actions needs screenplay_record. Does not touch the app; writes the video files, and sends new narration text to Cartesia or ElevenLabs when the scenario enables voice-over.",
       inputSchema: recordArgs,
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },

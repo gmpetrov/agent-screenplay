@@ -122,7 +122,7 @@ program
   .command("login")
   .argument("<url>", "page to sign in on")
   .option("-o, --out <file>", "where to save the session", ".screenplay/auth.json")
-  .description("Open a browser to sign in once; the session is saved for scenarios (auth.storageState).")
+  .description("Open a browser to sign in once, or to pass a bot check (Cloudflare) by hand; close the window when done. The session is saved for scenarios (auth.storageState).")
   .action(async (url: string, o: { out: string }) => {
     try {
       const file = await login(url, o.out, log);

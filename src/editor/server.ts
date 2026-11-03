@@ -21,7 +21,7 @@ import { defaultViewport } from "../drivers/web.js";
  */
 
 /** The settings the editor changes; a style's other settings are kept as they are. */
-export const EDITED = ["background", "padding", "radius", "shadow"] as const;
+export const EDITED = ["background", "padding", "radius", "shadow", "cards"] as const;
 const IMAGE_EXT = /\.(png|jpe?g|webp)$/i;
 
 export interface EditorOptions {
@@ -135,7 +135,7 @@ export function state(scenarioFile: string) {
     /** Every preset the page may have to draw, and the ones it offers. */
     presets: Object.fromEntries(Object.entries(ALL_PRESETS).map(([k, p]) => [k, { ...p, colors: presetColors(p) }])),
     offered: Object.keys(MESH_PRESETS),
-    defaults: { background: DEFAULT_BACKGROUND, padding: 72, radius: 14, shadow: true },
+    defaults: { background: DEFAULT_BACKGROUND, padding: 72, radius: 14, shadow: true, cards: false },
   };
 }
 

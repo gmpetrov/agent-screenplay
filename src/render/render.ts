@@ -59,6 +59,7 @@ export async function renderTake(loaded: LoadedScenario, take: Take, opts: Rende
     autoZoom: style.autoZoom,
     maxZoom: zoomCeiling(style.maxZoom, take, layout.content.w),
     captions: style.captions,
+    cards: style.cards,
   });
   const staticLayer = buildStaticLayer(layout, style, take.target.kind === "web" ? take.target.url : undefined);
   const bgLayer = createCanvas(OW, OH);
@@ -226,6 +227,7 @@ function pickStoryboardTimes(plan: Plan, take: Take): Array<{ o: number; label: 
   for (const st of take.steps) {
     const t = plan.stepTimes[st.index];
     if (!t) continue;
+    if (st.card && t.o1 <= t.o0) continue; // a card left out of the video
     let o: number;
     if (st.card) o = t.o0 + Math.min(1.2, (t.o1 - t.o0) / 2);
     else if (st.kind === "callout" || st.kind === "highlight") o = Math.min(t.o1 - 0.05, t.o0 + OVERLAY_DELAY + 0.7);

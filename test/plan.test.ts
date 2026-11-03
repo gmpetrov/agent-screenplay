@@ -77,6 +77,13 @@ describe("planTake", () => {
     expect(at.s).toBeCloseTo(1.2, 2);
   });
 
+  it("leaves the cards out when they are off, and still skips the lead-in", () => {
+    const p = planTake(take(), scenario, { fps: 30, audio: new Map(), autoZoom: true, maxZoom: 1.9, captions: true, cards: false });
+    expect(p.pieces.some((x) => x.kind === "card")).toBe(false);
+    expect(p.pieces[0]).toMatchObject({ kind: "capture", o0: 0, s0: 0.6 });
+    expect(p.duration).toBeLessThan(plan.duration - 1.9);
+  });
+
   it("takes card text and length from the scenario as it is now", () => {
     const edited = parseScenario({
       url: "https://example.com",

@@ -6,7 +6,8 @@ import { readingTime } from "./drivers/pace.js";
 import { readTake, writeTake, type Take } from "./take.js";
 import { captureInputs } from "./scenario/fingerprint.js";
 import { renderTake, type RenderResult } from "./render/render.js";
-import { synthesizeAll, type Clip } from "./voice/cartesia.js";
+import type { Clip } from "./voice/cartesia.js";
+import { narrate } from "./voice/narration.js";
 
 export interface RunOptions {
   /** Force the voice-over off (true) regardless of the scenario. */
@@ -23,16 +24,7 @@ export interface RecordResult extends RenderResult {
 }
 
 async function narration(loaded: LoadedScenario, opts: RunOptions): Promise<Map<number, Clip>> {
-  const voice = loaded.scenario.voice;
-  if (!voice?.enabled || opts.noVoice) return new Map();
-  const texts = new Map<number, string>();
-  loaded.scenario.steps.forEach((s, i) => {
-    const say = (s as { say?: string }).say;
-    if (say) texts.set(i, say);
-  });
-  if (texts.size === 0) return new Map();
-  opts.log?.(`Generating narration for ${texts.size} step(s)`);
-  return synthesizeAll(texts, voice, path.join(loaded.workDir, "cache", "voice"));
+  return narrate(loaded, { noVoice: opts.noVoice, log: opts.log });
 }
 
 /** How long each step must last so its narration or caption can be heard or read. */

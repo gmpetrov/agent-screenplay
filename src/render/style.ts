@@ -25,6 +25,7 @@ export interface ResolvedStyle {
   captions: boolean;
   accent: string;
   frame: "none" | "browser";
+  cards: boolean;
 }
 
 export async function resolveStyle(style: Style | undefined, baseDir: string): Promise<ResolvedStyle> {
@@ -62,6 +63,7 @@ export async function resolveStyle(style: Style | undefined, baseDir: string): P
     captions: s.captions ?? true,
     accent: s.accent ?? "#3b82f6",
     frame: s.frame ?? "none",
+    cards: s.cards ?? false,
   };
 }
 

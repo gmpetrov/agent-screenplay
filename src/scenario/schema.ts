@@ -31,6 +31,12 @@ const Common = {
     .union([z.boolean(), z.number().min(1).max(4)])
     .optional()
     .describe("false: keep the camera wide for this step. A number: force this zoom level (1 = no zoom)."),
+  audio: z
+    .string()
+    .optional()
+    .describe(
+      "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+    ),
   hold: z
     .number()
     .min(0)
@@ -103,6 +109,7 @@ const Title = z
     subtitle: z.string().optional(),
     duration: z.number().min(0.5).max(15).optional(),
     say: Common.say,
+    audio: Common.audio,
   })
   .strict();
 const End = z
@@ -111,6 +118,7 @@ const End = z
     subtitle: z.string().optional(),
     duration: z.number().min(0.5).max(15).optional(),
     say: Common.say,
+    audio: Common.audio,
   })
   .strict();
 const Callout = z
@@ -188,17 +196,28 @@ export const Style = z
     captions: z.boolean().optional().describe("Show the `say` text as captions (default true)."),
     accent: z.string().optional().describe("Accent color for clicks, callouts and highlights (default #3b82f6)."),
     frame: z.enum(["none", "browser"]).optional().describe("Draw a minimal browser window bar above web recordings (default none)."),
+    cards: z
+      .boolean()
+      .optional()
+      .describe("Show the title and end cards (default false: `title` and `end` steps are left out of the video). Turn on when the person wants an intro and an outro."),
   })
   .strict();
 export type Style = z.infer<typeof Style>;
 
 export const Voice = z
   .object({
-    enabled: z.boolean().optional().describe("Speak each step's `say` text (default false). Needs CARTESIA_API_KEY."),
+    enabled: z
+      .boolean()
+      .optional()
+      .describe("Speak each step's `say` text (default false). Needs CARTESIA_API_KEY or ELEVENLABS_API_KEY, unless every spoken step has its own `audio` file."),
+    provider: z
+      .enum(["cartesia", "elevenlabs"])
+      .optional()
+      .describe("Who speaks (default: Cartesia when CARTESIA_API_KEY is set, else ElevenLabs when ELEVENLABS_API_KEY is)."),
     language: z.string().optional().describe("Language code, e.g. en, fr, de (default en)."),
-    id: z.string().optional().describe("Cartesia voice id (default: a narration voice for the language)."),
+    id: z.string().optional().describe("The provider's voice id (default: a narration voice)."),
     speed: z.number().min(0.6).max(1.5).optional(),
-    model: z.string().optional().describe("Cartesia model (default sonic-3.6)."),
+    model: z.string().optional().describe("The provider's model (default sonic-3.6 for Cartesia, eleven_multilingual_v2 for ElevenLabs)."),
   })
   .strict();
 export type Voice = z.infer<typeof Voice>;
