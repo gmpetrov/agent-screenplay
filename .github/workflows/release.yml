@@ -52,9 +52,15 @@ jobs:
           # Unused once the package trusts this workflow on npmjs.com (trusted publishing).
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: GitHub release
+        run: gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes ${{ steps.check.outputs.pre }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       # Lists the new version in the official MCP Registry (registry.modelcontextprotocol.io).
       # The registry checks that the npm package's "mcpName" matches server.json's name, so this runs
-      # after the npm publish. Signs in with this workflow's GitHub identity (OIDC), no secret.
+      # after the npm publish. It runs last, so a registry hiccup cannot skip the GitHub release.
+      # Signs in with this workflow's GitHub identity (OIDC), no secret.
       - name: Install cosign
         if: steps.check.outputs.npmtag == 'latest'
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
@@ -76,11 +82,12 @@ jobs:
             "$archive"
           tar xzf "$archive" mcp-publisher
           rm -f "$archive" "$archive.sigstore.json"
+          # npm can take a minute to serve a version it just published, and the registry refuses a
+          # version it can't find on npm yet.
+          for i in $(seq 1 30); do
+            npm view "agent-screenplay@$VERSION" version >/dev/null 2>&1 && break
+            echo "Waiting for agent-screenplay@$VERSION on npm..."; sleep 10
+          done
           jq --arg v "$VERSION" '.version = $v | .packages[0].version = $v' server.json > server.tmp && mv server.tmp server.json
           ./mcp-publisher login github-oidc
           ./mcp-publisher publish
-
-      - name: GitHub release
-        run: gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes ${{ steps.check.outputs.pre }}
-        env:
-          GH_TOKEN: ${{ github.token }}
