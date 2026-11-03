@@ -1,5 +1,7 @@
 # Screenplay
 
+https://github.com/user-attachments/assets/dd9898da-4900-4a91-8620-57a860c46093
+
 **Screen Studio-quality screen recordings, made by your AI agent.**
 
 Ask Claude Code, Codex, Cursor or any agent: *"Make a video that shows how human handoff works"*. The agent explores your app and writes a short **scenario**; Screenplay plays it in a browser (or a desktop app), films it, and edits the video like Screen Studio would: smooth cursor, automatic zooms that follow the action, click effects, callouts, spotlight, captions, title cards, and an optional voice-over.
