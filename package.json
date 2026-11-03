@@ -46,6 +46,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "prepublishOnly": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && npm run build",
+    "version": "node scripts/sync-version.mjs && git add src/version.ts",
     "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {

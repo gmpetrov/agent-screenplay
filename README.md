@@ -157,6 +157,20 @@ npm test                 # unit tests
 npm run test:e2e         # records a real scenario in headless Chromium and talks to the MCP server
 ```
 
+### Releasing
+
+```bash
+npm version patch --no-git-tag-version   # or minor / major; also updates src/version.ts
+```
+
+Merge that change, then tag the commit on main:
+
+```bash
+git tag v0.1.4 origin/main && git push origin v0.1.4
+```
+
+The tag starts `.github/workflows/release.yml`. It checks that the tag matches the version and is on main, runs the tests, publishes to npm (with provenance) and creates the GitHub release with notes from the merged pull requests. A version like `0.2.0-beta.1` goes to npm's `next` tag. Creating a release in GitHub's UI with a new tag works too.
+
 `examples/demo-app` is a small web app for trying scenarios; `examples/desktop-app/notes.py` is a GTK app for desktop recording on Linux.
 
 ## License
