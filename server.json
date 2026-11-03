@@ -1,0 +1,23 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.gmpetrov/agent-screenplay",
+  "title": "Screenplay",
+  "description": "Beautiful screen recordings of any website or desktop app, scripted by your agent.",
+  "repository": {
+    "url": "https://github.com/gmpetrov/agent-screenplay",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/gmpetrov/agent-screenplay#readme",
+  "version": "0.1.6",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "agent-screenplay",
+      "version": "0.1.6",
+      "runtimeHint": "npx",
+      "packageArguments": [{ "type": "positional", "value": "mcp" }],
+      "transport": { "type": "stdio" }
+    }
+  ]
+}
