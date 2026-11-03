@@ -23,9 +23,6 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
           cache: npm
-      # Trusted publishing needs npm 11.5.1 or later.
-      - run: npm install -g npm@latest
-
       - name: Check the tag
         id: check
         run: |
@@ -48,7 +45,9 @@ jobs:
 
       - name: Publish to npm
         if: steps.check.outputs.published != 'true'
-        run: npm publish --access public --provenance --tag "${{ steps.check.outputs.npmtag }}"
+        # Trusted publishing needs npm 11.5.1 or later. The newest npm is used only here: installed
+        # globally before `npm ci`, it left ffmpeg-static without its binary and the tests failed.
+        run: npx -y npm@latest publish --access public --provenance --tag "${{ steps.check.outputs.npmtag }}"
         env:
           # Unused once the package trusts this workflow on npmjs.com (trusted publishing).
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
