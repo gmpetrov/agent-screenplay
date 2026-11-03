@@ -90,7 +90,7 @@
       "type": "object",
       "properties": {
         "background": {
-          "description": "A preset (aurora, sky, dusk, ember, graphite, lagoon, lilac, peach, linen; default aurora), a color like #0f172a, an image path (relative to the file that sets it), or a gradient { \"gradient\": [\"#0ea5e9\", \"#6366f1\"], \"angle\": 135 }.",
+          "description": "A preset (dawn, iris, citrus, apricot, coral, blaze, cloud, glacier, tide, meadow; default dawn), a color like #0f172a, an image path (relative to the file that sets it), or a gradient { \"gradient\": [\"#0ea5e9\", \"#6366f1\"], \"angle\": 135 }.",
           "anyOf": [
             {
               "type": "string"
@@ -178,6 +178,10 @@
             "none",
             "browser"
           ]
+        },
+        "cards": {
+          "description": "Show the title and end cards (default false: `title` and `end` steps are left out of the video). Turn on when the person wants an intro and an outro.",
+          "type": "boolean"
         }
       },
       "additionalProperties": false
@@ -186,15 +190,23 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "description": "Speak each step's `say` text (default false). Needs CARTESIA_API_KEY.",
+          "description": "Speak each step's `say` text (default false). Needs CARTESIA_API_KEY or ELEVENLABS_API_KEY, unless every spoken step has its own `audio` file.",
           "type": "boolean"
+        },
+        "provider": {
+          "description": "Who speaks (default: Cartesia when CARTESIA_API_KEY is set, else ElevenLabs when ELEVENLABS_API_KEY is).",
+          "type": "string",
+          "enum": [
+            "cartesia",
+            "elevenlabs"
+          ]
         },
         "language": {
           "description": "Language code, e.g. en, fr, de (default en).",
           "type": "string"
         },
         "id": {
-          "description": "Cartesia voice id (default: a narration voice for the language).",
+          "description": "The provider's voice id (default: a narration voice).",
           "type": "string"
         },
         "speed": {
@@ -203,7 +215,7 @@
           "maximum": 1.5
         },
         "model": {
-          "description": "Cartesia model (default sonic-3.6).",
+          "description": "The provider's model (default sonic-3.6 for Cartesia, eleven_multilingual_v2 for ElevenLabs).",
           "type": "string"
         }
       },
@@ -289,6 +301,10 @@
                   }
                 ]
               },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
+              },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
                 "type": "number",
@@ -340,6 +356,10 @@
                     "maximum": 4
                   }
                 ]
+              },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
               },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
@@ -403,6 +423,10 @@
                     "maximum": 4
                   }
                 ]
+              },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
               },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
@@ -473,6 +497,10 @@
                   }
                 ]
               },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
+              },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
                 "type": "number",
@@ -524,6 +552,10 @@
                     "maximum": 4
                   }
                 ]
+              },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
               },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
@@ -577,6 +609,10 @@
                     "maximum": 4
                   }
                 ]
+              },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
               },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
@@ -645,6 +681,10 @@
                   }
                 ]
               },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
+              },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
                 "type": "number",
@@ -700,6 +740,10 @@
                     "maximum": 4
                   }
                 ]
+              },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
               },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
@@ -771,6 +815,10 @@
                   }
                 ]
               },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
+              },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
                 "type": "number",
@@ -825,6 +873,10 @@
                   }
                 ]
               },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
+              },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
                 "type": "number",
@@ -871,6 +923,10 @@
               "say": {
                 "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
                 "type": "string"
+              },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
               }
             },
             "required": [
@@ -895,6 +951,10 @@
               },
               "say": {
                 "description": "Narration for this step: shown as a caption, and spoken when voice is enabled. The step lasts at least as long as the sentence.",
+                "type": "string"
+              },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
                 "type": "string"
               }
             },
@@ -936,6 +996,10 @@
                     "maximum": 4
                   }
                 ]
+              },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
               },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
@@ -999,6 +1063,10 @@
                   }
                 ]
               },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
+              },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",
                 "type": "number",
@@ -1056,6 +1124,10 @@
                     "maximum": 4
                   }
                 ]
+              },
+              "audio": {
+                "description": "An audio file (MP3, WAV, M4A…) with this step's narration, relative to the scenario: used instead of generating `say`, with no voice key. The step lasts at least as long as the file.",
+                "type": "string"
               },
               "hold": {
                 "description": "Extra seconds to stay on the result of this step before the next one.",

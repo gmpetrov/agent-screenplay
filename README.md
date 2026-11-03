@@ -16,7 +16,18 @@ npx agent-screenplay init
 
 The npm package is `agent-screenplay`; installed globally (`npm i -g agent-screenplay`), its command is `screenplay`.
 
-`init` downloads Chromium (once), adds the Screenplay MCP server to the agents it finds (Claude Code, Codex, Cursor), and installs the guide that teaches them to make good videos. Then ask your agent for a recording.
+`init` downloads Chromium (once), adds the Screenplay MCP server to the agents it finds (Claude Code, Codex, Cursor), and installs the guide that teaches them to make good videos. Restart your agent after it.
+
+## Use it
+
+In **Claude Code**, type `/screenplay` and say what you want:
+
+```
+/screenplay Make a 30-second walkthrough of https://askli.co
+/screenplay Film how to invite a teammate in our app, with a French voice-over
+```
+
+In **Codex, Cursor** or any agent with the MCP server, just ask: *"Make a screen recording of …"*. The agent explores the site, asks whether you want a voice-over, writes the scenario, films it, checks the storyboard and gives you the MP4. To change the look afterwards: `npx agent-screenplay style <scenario.json>`.
 
 Without MCP, any agent that can run commands can use the CLI directly:
 
@@ -34,7 +45,7 @@ Requirements: Node 20+. ffmpeg and the drawing library ship with the package.
 ```json
 {
   "url": "https://app.example.com/inbox",
-  "style": { "background": "aurora" },
+  "style": { "background": "dawn" },
   "steps": [
     { "title": "Human handoff, in one click", "subtitle": "New in 2.4" },
     { "click": "text=Camille Laurent", "say": "When the AI agent gets stuck, the conversation lands in your inbox." },
@@ -51,7 +62,7 @@ Requirements: Node 20+. ffmpeg and the drawing library ship with the package.
 - **Targets** name elements the way people see them: `text=…`, `role=button[name='…']`, `label=…`, `placeholder=…`, `testid=…`, `css=…` (web only), `at=x,y` (desktop apps without accessible elements only).
 - **Actions**: `goto`, `click`, `type`, `press`, `hover`, `scroll`, `select`, `wait`, `pause`.
 - **Direction**: `title` and `end` cards, `callout` (a bubble pointing at an element), `highlight` (spotlight), `zoomTo`, and on any step `say` (caption and voice), `zoom`, `hold`.
-- **Style**: background preset (mesh gradients: `aurora`, `sky`, `dusk`, `ember`, `graphite`, `lagoon`, `lilac`, `peach`, `linen`), your own gradient, a color or an image; padding, corner radius, shadow, cursor style, maximum zoom, browser frame, accent color. See [Style](#style).
+- **Style**: background preset (soft light gradients: `dawn`, `iris`, `citrus`, `apricot`, `coral`, `blaze`, `cloud`, `glacier`, `tide`, `meadow`), your own gradient, a color or an image; padding, corner radius, shadow, cursor style, maximum zoom, browser frame, accent color. See [Style](#style).
 - **Output**: 1920×1080 at 30 fps by default; any size up to 4K, 24 to 60 fps, optional GIF.
 
 The full format is the JSON schema in [`schema/scenario.schema.json`](schema/scenario.schema.json) (`npx agent-screenplay schema`), and the agent guide in [`skills/screenplay/SKILL.md`](skills/screenplay/SKILL.md). Examples are in [`examples/`](examples).
@@ -77,11 +88,14 @@ Set the look by eye: `npx agent-screenplay style demo.json` opens an editor in y
 }
 ```
 
-`background` is a preset name (`aurora` by default; the first presets, `ocean`, `sunset` and so on, still work), a color (`"#0f172a"`), an image path (relative to the file that sets it), or `{ "gradient": [2 to 4 colors], "angle": degrees }`.
+Title and end cards (`title` and `end` steps) are **off by default**: turn them on with `"cards": true`, or with the switch in the editor.
+
+`background` is a preset name (`dawn` by default; earlier presets such as `aurora` or `ocean` still work), a color (`"#0f172a"`), an image path (relative to the file that sets it), or `{ "gradient": [2 to 4 colors], "angle": degrees }`.
 
 ## Signing in
 
-- `npx agent-screenplay login https://app.example.com` opens a browser; sign in, press Enter, and the session is saved to `.screenplay/auth.json`. Use it with `"auth": { "storageState": ".screenplay/auth.json" }`. Keep that file out of git.
+- `npx agent-screenplay login https://app.example.com` opens a browser window: sign in, then **close the window**. The session is saved to `.screenplay/auth.json` (while you go, and when the window closes; Enter in the terminal works too). Use it with `"auth": { "storageState": ".screenplay/auth.json" }`. Keep that file out of git.
+- **Bot checks** (Cloudflare's "Just a moment…"): Screenplay's browser presents itself as an ordinary Chrome, so the checks that need no person pass by themselves. When a site asks a person to prove they are human, `check` says so: run `login` on that site, pass the check in the window, close it, and set `auth.storageState`. Some sites ask again on every visit; those cannot be filmed automatically.
 - Agents without a screen can sign in with steps: `{ "type": "${EMAIL}", "into": "label=Email" }`, `{ "type": "${PASSWORD}", "into": "label=Password", "secret": true }`. `${VAR}` is read from the environment; `secret` masks the text in captions and logs.
 
 ## Voice-over
@@ -92,7 +106,13 @@ Off by default. Turn it on per scenario:
 "voice": { "enabled": true, "language": "fr" }
 ```
 
-Each step's `say` is spoken with [Cartesia](https://cartesia.ai) (set `CARTESIA_API_KEY`), and the video waits for each sentence to finish, so the voice sets the pace. Narration is cached: re-rendering with unchanged text costs nothing. `voice.id` picks another voice, `voice.speed` its pace. Without voice, `say` still shows as a caption.
+Each step's `say` is spoken, and the video waits for each sentence to finish, so the voice sets the pace. Three ways to get the voice:
+
+- **[Cartesia](https://cartesia.ai)**: set `CARTESIA_API_KEY`.
+- **[ElevenLabs](https://elevenlabs.io)**: set `ELEVENLABS_API_KEY`. When both keys are set, Cartesia is used unless `"provider": "elevenlabs"`.
+- **Your own audio files**, with no key: give a step `"audio": "voice/02.mp3"` (MP3, WAV, M4A…), for instance lines you generated in ElevenLabs' or Cartesia's web app. The agent can write the narration for you, one line per step, ready to paste there. Adding audio needs no new filming: `render`.
+
+Narration is cached: re-rendering with unchanged text costs nothing. `voice.id` picks another voice, `voice.speed` its pace. Without voice, `say` still shows as a caption.
 
 ## Desktop apps
 

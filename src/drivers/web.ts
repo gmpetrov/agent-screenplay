@@ -5,7 +5,7 @@ import type { LoadedScenario } from "../scenario/load.js";
 import { describeStep, stepKind, type Step } from "../scenario/schema.js";
 import { parseTarget } from "../scenario/target.js";
 import type { Box, Point, Take, TakeStep } from "../take.js";
-import { launchBrowser } from "./browser.js";
+import { botCheck, launchBrowser, realUserAgent } from "./browser.js";
 import { cardDuration, travelDuration, typingDelays } from "./pace.js";
 
 export interface WebRunOptions {
@@ -76,9 +76,10 @@ export async function runWeb(loaded: LoadedScenario, opts: WebRunOptions): Promi
   try {
     const storageState = scenario.auth?.storageState ? path.resolve(loaded.dir, scenario.auth.storageState) : undefined;
     if (storageState && !fs.existsSync(storageState)) {
-      throw new Error(`Session file not found: ${storageState}. Run \`screenplay login <url>\` to create it.`);
+      throw new Error(`Session file not found: ${storageState}. Run \`npx agent-screenplay login <url>\` to create it.`);
     }
     context = await browser.newContext({
+      userAgent: await realUserAgent(browser),
       viewport,
       deviceScaleFactor: scale,
       colorScheme: scenario.colorScheme,
@@ -103,6 +104,7 @@ export async function runWeb(loaded: LoadedScenario, opts: WebRunOptions): Promi
 
     log(`Opening ${baseUrl}`);
     await page.goto(baseUrl, { waitUntil: "load", timeout: 60_000 });
+    await passBotCheck(page, baseUrl, Boolean(storageState));
     await settle(page);
 
     // ---- capture -------------------------------------------------------
@@ -297,6 +299,7 @@ async function runStep(page: Page, step: Step, ts: TakeStep, cursor: Point, ctx:
       const url = new URL(s.goto, ctx.baseUrl).toString();
       const w0 = now();
       await page.goto(url, { waitUntil: "load", timeout: 60_000 });
+      await passBotCheck(page, url, false);
       await settle(page);
       ts.waits.push([w0, now()]);
       return cursor;
@@ -500,10 +503,47 @@ async function settleAfterAction(page: Page, ts: TakeStep, now: () => number, re
   if (waited > 0.6) ts.waits.push([w0, now()]);
 }
 
+/**
+ * Wait for a bot check (Cloudflare's "Just a moment…") to clear by itself, as most do; one that
+ * needs a person fails with what to do.
+ */
+async function passBotCheck(page: Page, url: string, hasSession: boolean) {
+  const deadline = Date.now() + 20_000;
+  let check = await botCheck(page);
+  while (check && Date.now() < deadline) {
+    await page.waitForTimeout(1000);
+    check = await botCheck(page);
+  }
+  if (!check) return;
+  throw new Error(
+    `${new URL(url).host} shows a bot check ("${check}") that needs a person. ` +
+      (hasSession
+        ? "The saved session no longer passes it: run `npx agent-screenplay login " + url + "` again, pass the check in the window, then close the window."
+        : "Run `npx agent-screenplay login " + url + '` (a person passes the check in the window, then closes it), then add "auth": { "storageState": ".screenplay/auth.json" } to the scenario.'),
+  );
+}
+
 async function settle(page: Page) {
   await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
   await page.evaluate(() => document.fonts?.ready).catch(() => {});
   await sleep(250);
+}
+
+/**
+ * A pattern that matches the text whatever its apostrophes, quotes, dashes and spacing: pages write
+ * J’accepte with a typographic apostrophe, scenarios usually J'accepte.
+ */
+export function looseText(text: string): RegExp {
+  const esc = (c: string) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let src = "";
+  for (const ch of text.trim()) {
+    if (/['’‘ʼ`´]/.test(ch)) src += "['’‘ʼ`´]";
+    else if (/["“”«»„]/.test(ch)) src += '["“”«»„]';
+    else if (/[-–—]/.test(ch)) src += "[-–—]";
+    else if (/\s/.test(ch)) src += "\\s+";
+    else src += esc(ch);
+  }
+  return new RegExp(src, "i");
 }
 
 /** Find a visible element for a target, trying exact matches first. */
@@ -512,18 +552,19 @@ export async function findLocator(page: Page, target: string, index: number, tim
   const candidates: Locator[] = [];
   switch (parsed.kind) {
     case "text":
-      candidates.push(page.getByText(parsed.text, { exact: true }), page.getByText(parsed.text));
+      candidates.push(page.getByText(parsed.text, { exact: true }), page.getByText(parsed.text), page.getByText(looseText(parsed.text)));
       break;
     case "role":
       if (parsed.name !== undefined) {
         candidates.push(
           page.getByRole(parsed.role as any, { name: parsed.name, exact: true }),
           page.getByRole(parsed.role as any, { name: parsed.name }),
+          page.getByRole(parsed.role as any, { name: looseText(parsed.name) }),
         );
       } else candidates.push(page.getByRole(parsed.role as any));
       break;
     case "label":
-      candidates.push(page.getByLabel(parsed.text, { exact: true }), page.getByLabel(parsed.text));
+      candidates.push(page.getByLabel(parsed.text, { exact: true }), page.getByLabel(parsed.text), page.getByLabel(looseText(parsed.text)));
       break;
     case "placeholder":
       candidates.push(page.getByPlaceholder(parsed.text, { exact: true }), page.getByPlaceholder(parsed.text));
@@ -574,7 +615,26 @@ async function listCandidates(page: Page): Promise<string[]> {
           el.textContent?.trim() ??
           "";
         const name = label.replace(/\s+/g, " ").slice(0, 60);
-        if (!name) continue;
+        if (!name) {
+          // No name in the page, yet a person may see one: text drawn by CSS (::before/::after),
+          // as some cookie walls do to resist blockers. Offer a css= target with what it shows.
+          if (r.bottom < 0 || r.top > window.innerHeight) continue;
+          const drawn = [el, ...Array.from(el.querySelectorAll("*"))]
+            .flatMap((e) => ["::before", "::after"].map((p) => getComputedStyle(e, p).content))
+            .filter((c) => c && c !== "none" && c !== "normal")
+            .map((c) => c.replace(/^["']|["']$/g, ""))
+            .join(" ")
+            .trim();
+          const cls = Array.from(el.classList).find((c) => /^[a-z][\w-]*$/i.test(c) && document.getElementsByClassName(c).length === 1);
+          const sel = el.id ? `#${el.id}` : cls ? `${tag}.${cls}` : "";
+          if (!sel || !drawn) continue;
+          const t = `css=${sel}`;
+          if (!seen.has(t)) {
+            seen.add(t);
+            out.push(`${t} (shows "${drawn.slice(0, 40)}")`);
+          }
+          continue;
+        }
         const t = `role=${role}[name='${name.replace(/'/g, "\\'")}']`;
         if (!seen.has(t)) {
           seen.add(t);

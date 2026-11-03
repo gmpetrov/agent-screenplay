@@ -7,8 +7,8 @@ import { describeStep, stepKind, type Scenario } from "./schema.js";
  * can change and be re-rendered without filming again; anything else that
  * changes (a target, typed text, a wait, a hold) needs a new recording.
  */
-const EDITORIAL_KEYS = new Set(["say", "zoom", "text"]);
-const CARD_KEYS = new Set(["title", "end", "subtitle", "duration", "say"]);
+const EDITORIAL_KEYS = new Set(["say", "zoom", "text", "audio"]);
+const CARD_KEYS = new Set(["title", "end", "subtitle", "duration", "say", "audio"]);
 
 export function captureInputs(scenario: Scenario): { setup: string; steps: string[] } {
   const setup = JSON.stringify([

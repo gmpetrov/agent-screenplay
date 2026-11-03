@@ -40,3 +40,20 @@ describe("desktop translation", () => {
     expect(normalizeCombo("Meta+K")).toBe(process.platform === "darwin" ? "cmd+k" : "super+k");
   });
 });
+
+describe("looseText", () => {
+  it("matches whatever the apostrophes, quotes, dashes and spaces", async () => {
+    const { looseText } = await import("../src/drivers/web.js");
+    expect(looseText("J'accepte").test("J’accepte")).toBe(true);
+    expect(looseText('Say "hi" — now').test("say «hi» -  now")).toBe(true);
+    expect(looseText("a.b (c)").test("a.b (c)")).toBe(true);
+    expect(looseText("a.b").test("axb")).toBe(false);
+  });
+});
+
+describe("css targets copied from check", () => {
+  it("drop the shown text", async () => {
+    const { parseTarget } = await import("../src/scenario/target.js");
+    expect(parseTarget(`css=button.cookies (shows "J'accepte")`)).toEqual({ kind: "css", selector: "button.cookies" });
+  });
+});

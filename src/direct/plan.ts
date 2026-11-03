@@ -79,6 +79,8 @@ export interface PlanOptions {
   autoZoom: boolean;
   maxZoom: number;
   captions: boolean;
+  /** Show the title and end cards (style.cards). When false they are left out of the video. */
+  cards?: boolean;
 }
 
 const WAIT_KEEP = 0.9; // seconds of a wait shown at normal speed
@@ -132,6 +134,13 @@ export function planTake(take: Take, scenario: Scenario, opts: PlanOptions): Pla
   const voice: VoiceClip[] = [];
   for (const st of steps) {
     const audio = opts.audio.get(st.index);
+    if (st.card && opts.cards === false) {
+      // Cards are off: the step takes no time in the video. A video that started with one
+      // still drops the still lead-in recorded before it.
+      if (pieces.length === 0) sp = st.start;
+      emitCapture(st.start);
+      continue;
+    }
     if (st.card) {
       // An opening card starts the video: drop the still lead-in recorded before it.
       if (pieces.length === 0) sp = st.start;

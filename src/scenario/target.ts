@@ -30,7 +30,8 @@ export function parseTarget(input: string): ParsedTarget {
     case "testid":
       return { kind: "testid", id: unquote(rest) };
     case "css":
-      return { kind: "css", selector: rest };
+      // `check` lists such targets as css=… (shows "…"): accept them copied whole.
+      return { kind: "css", selector: rest.replace(/\s+\(shows ".*"\)$/, "") };
     case "at": {
       const [x, y] = rest.split(",").map((v) => Number(v.trim()));
       if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error(`Invalid target "${input}". Use at=x,y.`);

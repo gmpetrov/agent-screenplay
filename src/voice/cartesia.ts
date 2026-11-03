@@ -43,12 +43,7 @@ export async function synthesizeAll(texts: Map<number, string>, voice: Voice, ca
   const model = voice.model ?? DEFAULT_MODEL;
   const out = new Map<number, Clip>();
   for (const [index, text] of texts) {
-    const hash = crypto
-      .createHash("sha1")
-      .update(JSON.stringify([model, voiceId, language, voice.speed ?? 1, text]))
-      .digest("hex")
-      .slice(0, 16);
-    const file = path.join(cacheDir, `${hash}.wav`);
+    const file = cartesiaCacheFile(text, voice, cacheDir, voiceId)!;
     if (!fs.existsSync(file)) {
       const key = requireKey();
       const body = {
@@ -90,6 +85,22 @@ async function defaultVoice(language: string, key: string): Promise<string> {
     if (id) return id;
   }
   throw new VoiceError(`No Cartesia voice found for language "${language}". Set voice.id in the scenario.`);
+}
+
+/**
+ * Where a sentence's Cartesia clip is cached. Without a voice id (a language with no built-in
+ * default), there is none to know offline: undefined.
+ */
+export function cartesiaCacheFile(text: string, voice: Voice, cacheDir: string, voiceId?: string): string | undefined {
+  const language = voice.language ?? "en";
+  const id = voiceId ?? voice.id ?? DEFAULT_VOICES[language.split("-")[0].toLowerCase()];
+  if (!id) return undefined;
+  const hash = crypto
+    .createHash("sha1")
+    .update(JSON.stringify([voice.model ?? DEFAULT_MODEL, id, language, voice.speed ?? 1, text]))
+    .digest("hex")
+    .slice(0, 16);
+  return path.join(cacheDir, `${hash}.wav`);
 }
 
 /** Duration of a PCM WAV file, from its header. */
