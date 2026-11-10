@@ -2,7 +2,7 @@
 
 https://github.com/user-attachments/assets/dd9898da-4900-4a91-8620-57a860c46093
 
-[![npm](https://img.shields.io/npm/v/agent-screenplay)](https://www.npmjs.com/package/agent-screenplay) [![MIT license](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.gmpetrov%2Fagent--screenplay-purple)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.gmpetrov/agent-screenplay)
+[![npm](https://img.shields.io/npm/v/agent-screenplay)](https://www.npmjs.com/package/agent-screenplay) [![MIT license](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.gmpetrov%2Fagent--screenplay-purple)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.gmpetrov/agent-screenplay) [![Made with Brigade](https://img.shields.io/badge/made_with-Brigade-855ef6?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjYTU4YWY5Ii8+PHN0b3Agb2Zmc2V0PSIuNTUiIHN0b3AtY29sb3I9IiM4NTVlZjYiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM2YzQzZTYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwLjAgMC4wKSBzY2FsZSgxLjApIj48cGF0aCBmaWxsPSJ1cmwoI2cpIiBkPSJNNTYgMEE0NCA1NiAwIDAgMSAxMDAgNTZBNDAgNDQgMCAwIDEgNjAgMTAwQTYwIDU0IDAgMCAxIDAgNDZBNTYgNDYgMCAwIDEgNTYgMFoiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiMxOTBkMmIiIHN0cm9rZS13aWR0aD0iNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48cGF0aCBkPSJNMzQuNSA0NFE0MC41IDI4IDQ2LjUgNDQiLz48cGF0aCBkPSJNNTMuNSA0NFE1OS41IDI4IDY1LjUgNDQiLz48L2c+PC9nPjwvc3ZnPg==)](https://www.brigade.lol/?utm_source=github&utm_medium=readme&utm_campaign=agent-screenplay)
 
 **Create beautiful screen recordings with one prompt.** Any website, yours or someone else's, or any desktop app. Works with Claude Code, Codex, Cursor and any MCP client.
 
@@ -176,6 +176,10 @@ git tag v0.1.4 origin/main && git push origin v0.1.4
 The tag starts `.github/workflows/release.yml`. It checks that the tag matches the version and is on main, runs the tests, publishes to npm (with provenance) and creates the GitHub release with notes from the merged pull requests. A version like `0.2.0-beta.1` goes to npm's `next` tag. Creating a release in GitHub's UI with a new tag works too.
 
 `examples/demo-app` is a small web app for trying scenarios; `examples/desktop-app/notes.py` is a GTK app for desktop recording on Linux.
+
+## Made with Brigade
+
+Screenplay is built by AI teammates on [Brigade](https://www.brigade.lol/?utm_source=github&utm_medium=readme&utm_campaign=agent-screenplay): teammates that write your code, answer your customers and run your marketing, on the Claude or ChatGPT plan you already pay for.
 
 ## License
 
