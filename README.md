@@ -136,10 +136,6 @@ While Screenplay drives the computer, a pill at the top of the screen says so ("
 
 `"screen": true` films the whole main screen instead of one window, for videos that go from one app to another or use the menu bar. `{ "open": "<app>" }` launches an app or brings it to the front, a step's `"app"` acts in another app, and `"surface": "menubar"` (or `menu`, `sheet`, `popover`, `alert`) finds elements outside the app's window. Everything on screen is filmed, desktop icons and notifications included: tidy the screen first; on macOS `"hideOthers": true` hides the other apps.
 
-## Recipes
-
-- [A video for every page of your docs](recipes/docs-videos): a skill that films an explainer for each feature page, and a nightly check that tells you when one goes stale.
-
 ## How it works
 
 ```
