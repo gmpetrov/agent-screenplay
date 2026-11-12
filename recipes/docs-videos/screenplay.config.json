@@ -1,0 +1,9 @@
+{
+  "style": {
+    "background": "iris",
+    "padding": 72,
+    "radius": 14,
+    "frame": "browser",
+    "accent": "#6c43e6"
+  }
+}
