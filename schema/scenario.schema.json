@@ -80,6 +80,13 @@
       "description": "Web: hide scrollbars (default true).",
       "type": "boolean"
     },
+    "popups": {
+      "description": "Web: \"same-tab\" opens what the page opens in a new tab or window (a sign-in with Google, a checkout) in the filmed tab instead, so it is filmed.",
+      "type": "string",
+      "enum": [
+        "same-tab"
+      ]
+    },
     "typingSpeed": {
       "description": "Typing speed multiplier (default 1, about 14 characters/second).",
       "type": "number",

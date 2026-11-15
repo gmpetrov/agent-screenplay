@@ -23,6 +23,7 @@ export function captureInputs(scenario: Scenario): { setup: string; steps: strin
     scenario.typingSpeed ?? null,
     // Appended only when set, so takes recorded before these options existed keep their fingerprint.
     ...(scenario.screen || scenario.hideOthers ? [scenario.screen ?? null, scenario.hideOthers ?? null] : []),
+    ...(scenario.popups ? [scenario.popups] : []),
   ]);
   const steps = scenario.steps.map((step) => {
     const kind = stepKind(step);

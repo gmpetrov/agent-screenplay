@@ -270,6 +270,12 @@ export const Scenario = z
       .object({ storageState: z.string().describe("Path to a session saved by `screenplay login`.") })
       .optional(),
     hideScrollbars: z.boolean().optional().describe("Web: hide scrollbars (default true)."),
+    popups: z
+      .enum(["same-tab"])
+      .optional()
+      .describe(
+        "Web: \"same-tab\" opens what the page opens in a new tab or window (a sign-in with Google, a checkout) in the filmed tab instead, so it is filmed.",
+      ),
     typingSpeed: z.number().min(0.2).max(5).optional().describe("Typing speed multiplier (default 1, about 14 characters/second)."),
     style: Style.optional(),
     voice: Voice.optional(),

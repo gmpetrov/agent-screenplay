@@ -86,6 +86,26 @@ export async function runWeb(loaded: LoadedScenario, opts: WebRunOptions): Promi
       locale: scenario.locale,
       storageState,
     });
+    // Only the first tab is filmed: a link or window.open() that would open another one goes to
+    // this tab instead. window.open() returns null, as for a blocked pop-up, so pages that fall
+    // back to navigating themselves (a sign-in tab) do so.
+    if (scenario.popups === "same-tab") {
+      await context.addInitScript(() => {
+        window.open = (url?: string | URL) => {
+          const target = url === undefined ? "" : String(url);
+          if (target && target !== "about:blank") window.location.assign(target);
+          return null;
+        };
+        document.addEventListener(
+          "click",
+          (event) => {
+            const link = (event.target as Element | null)?.closest?.("a[target]");
+            if (link && (link as HTMLAnchorElement).target !== "_self") (link as HTMLAnchorElement).target = "_self";
+          },
+          true,
+        );
+      });
+    }
     if (scenario.hideScrollbars !== false) {
       await context.addInitScript(() => {
         const css = "::-webkit-scrollbar{display:none!important}*{scrollbar-width:none!important}";
