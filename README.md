@@ -1,5 +1,9 @@
 # Screenplay
 
+<!-- yarkr:badges:start -->
+[![Indexed on Yarkr](https://api.yarkr.com/functions/v1/api/api/v1/badges/repos/gmpetrov/agent-screenplay/version.svg)](https://yarkr.com/arks/gmpetrov/agent-screenplay)
+<!-- yarkr:badges:end -->
+
 https://github.com/user-attachments/assets/dd9898da-4900-4a91-8620-57a860c46093
 
 [![npm](https://img.shields.io/npm/v/agent-screenplay)](https://www.npmjs.com/package/agent-screenplay) [![MIT license](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.gmpetrov%2Fagent--screenplay-purple)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.gmpetrov/agent-screenplay) [![Made with Brigade](https://img.shields.io/badge/made_with-Brigade-855ef6?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjYTU4YWY5Ii8+PHN0b3Agb2Zmc2V0PSIuNTUiIHN0b3AtY29sb3I9IiM4NTVlZjYiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM2YzQzZTYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwLjAgMC4wKSBzY2FsZSgxLjApIj48cGF0aCBmaWxsPSJ1cmwoI2cpIiBkPSJNNTYgMEE0NCA1NiAwIDAgMSAxMDAgNTZBNDAgNDQgMCAwIDEgNjAgMTAwQTYwIDU0IDAgMCAxIDAgNDZBNTYgNDYgMCAwIDEgNTYgMFoiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiMxOTBkMmIiIHN0cm9rZS13aWR0aD0iNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48cGF0aCBkPSJNMzQuNSA0NFE0MC41IDI4IDQ2LjUgNDQiLz48cGF0aCBkPSJNNTMuNSA0NFE1OS41IDI4IDY1LjUgNDQiLz48L2c+PC9nPjwvc3ZnPg==)](https://www.brigade.lol/?utm_source=github&utm_medium=readme&utm_campaign=agent-screenplay)
@@ -21,6 +25,38 @@ npx agent-screenplay init
 The npm package is `agent-screenplay`; installed globally (`npm i -g agent-screenplay`), its command is `screenplay`.
 
 `init` downloads Chromium (once), adds the Screenplay MCP server to the agents it finds (Claude Code, Codex, Cursor), and installs the guide that teaches them to make good videos. Restart your agent after it.
+
+<!-- yarkr:install:start -->
+## Install with Yarkr
+
+This repo is indexed on [Yarkr](https://yarkr.com/arks/gmpetrov/agent-screenplay) as the ark [gmpetrov/agent-screenplay](https://yarkr.com/arks/gmpetrov/agent-screenplay), so its skills install into Claude Code, Codex, Cursor and other agent harnesses with one command.
+
+### CLI
+
+Install the whole ark, which Yarkr keeps equal to this repo:
+
+```bash
+npx yarkr-cli sync gmpetrov/agent-screenplay
+```
+
+Or add individual skills:
+
+```bash
+npx yarkr-cli add skill:gmpetrov/agent-screenplay/screenplay
+```
+
+No Node.js? `curl -fsSL https://yarkr.com/install.sh | sh` (macOS, Linux) or `irm https://yarkr.com/install.ps1 | iex` (Windows PowerShell) installs `yarkr` as a standalone binary; then type `yarkr` in place of `npx yarkr-cli`.
+
+### MCP
+
+Connect your agent to the ark over MCP:
+
+```bash
+npx yarkr-cli mcp add gmpetrov/agent-screenplay
+```
+
+Or point any MCP client at `https://api.yarkr.com/functions/v1/api/mcp/o/gmpetrov/agent-screenplay`.
+<!-- yarkr:install:end -->
 
 ## Use it
 
